@@ -11,6 +11,19 @@ import { Btn, EmptyState, StatusPill } from "@/components/ui";
 
 const FILTERS = ["alle", "ueberfaellig", "teilabwanderung", "faellig_bald"] as const;
 
+const FILTER_META: Record<(typeof FILTERS)[number], { de: string; en: string; hintDe: string; hintEn: string }> = {
+  alle: { de: "Alle", en: "All", hintDe: "Alle Zeilen im Auszug", hintEn: "All rows in the extract" },
+  ueberfaellig: { de: "Überfällig", en: "Overdue", hintDe: "Fälligkeit überschritten – inkl. über 60 Tage", hintEn: "Past due – incl. over 60 days" },
+  teilabwanderung: { de: "Über 60 Tage", en: "Over 60 days", hintDe: "Seit über 60 Tagen überfällig – vermutlich anderswo kalibriert", hintEn: "Overdue for 60+ days – probably calibrated elsewhere" },
+  faellig_bald: { de: "Fällig bald", en: "Due soon", hintDe: "Wird in den nächsten 30 Tagen fällig", hintEn: "Falls due within the next 30 days" },
+};
+
+function matchesStatus(status: string, f: (typeof FILTERS)[number]): boolean {
+  if (f === "alle") return true;
+  if (f === "ueberfaellig") return status === "ueberfaellig" || status === "teilabwanderung";
+  return status === f;
+}
+
 export default function MessmittelPage() {
   const { lang } = useI18n();
   const loc = lang === "de" ? "de-DE" : "en-GB";
@@ -24,15 +37,20 @@ export default function MessmittelPage() {
     if (!rows) return [];
     const query = q.trim().toLowerCase();
     return rows.filter((r) => {
-      if (status !== "alle" && r.status !== status) return false;
+      if (!matchesStatus(r.status, status)) return false;
       if (query && !r.ident.toLowerCase().includes(query) && !r.kunde.includes(query) && !r.gruppe.toLowerCase().includes(query) && !r.typ.toLowerCase().includes(query)) return false;
       return true;
     });
   }, [rows, q, status]);
 
   const counts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of rows ?? []) m.set(r.status, (m.get(r.status) ?? 0) + 1);
+    const m = new Map<(typeof FILTERS)[number], number>();
+    for (const r of rows ?? []) {
+      m.set("alle", (m.get("alle") ?? 0) + 1);
+      if (r.status === "ueberfaellig" || r.status === "teilabwanderung") m.set("ueberfaellig", (m.get("ueberfaellig") ?? 0) + 1);
+      if (r.status === "teilabwanderung") m.set("teilabwanderung", (m.get("teilabwanderung") ?? 0) + 1);
+      if (r.status === "faellig_bald") m.set("faellig_bald", (m.get("faellig_bald") ?? 0) + 1);
+    }
     return m;
   }, [rows]);
 
@@ -42,9 +60,6 @@ export default function MessmittelPage() {
         <div>
           <h2 className="text-[17px] font-bold text-navy-800 flex items-center gap-2">
             {lang === "de" ? "Messmittel" : "Instruments"}
-            <span className="inline-flex items-center h-[18px] px-1.5 rounded border border-emerald-300 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
-              CSV
-            </span>
           </h2>
           <p className="text-[12.5px] text-ink-3 tnum">
             {data
@@ -60,17 +75,14 @@ export default function MessmittelPage() {
             <button
               key={s}
               onClick={() => setStatus(s)}
+              title={lang === "de" ? FILTER_META[s].hintDe : FILTER_META[s].hintEn}
               className={clsx(
                 "h-[27px] px-2.5 rounded-full border text-[12px] font-semibold transition-colors",
                 status === s ? "bg-navy-800 border-navy-800 text-white" : "border-line text-ink-2 bg-surface-0 hover:border-line-strong",
               )}
             >
-              {s === "alle"
-                ? lang === "de" ? "Alle" : "All"
-                : s === "ueberfaellig" ? (lang === "de" ? "Überfällig" : "Overdue")
-                : s === "teilabwanderung" ? (lang === "de" ? "Teilabwanderung" : "Partial churn")
-                : (lang === "de" ? "Fällig bald" : "Due soon")}{" "}
-              <span className="tnum opacity-70">{s === "alle" ? num(rows?.length ?? 0, 0, loc) : num(counts.get(s) ?? 0, 0, loc)}</span>
+              {lang === "de" ? FILTER_META[s].de : FILTER_META[s].en}{" "}
+              <span className="tnum opacity-70">{num(counts.get(s) ?? 0, 0, loc)}</span>
             </button>
           ))}
           <label className="flex items-center gap-2 h-[29px] pl-2.5 pr-2 rounded-[8px] border border-line bg-surface-0 w-[190px]">
@@ -133,7 +145,7 @@ export default function MessmittelPage() {
         )}
       </div>
       <p className="mt-3 text-[11.5px] text-ink-3">
-        {lang === "de" ? "Quelle: MESSMITTEL.csv, Stichtag 25.09.2026." : "Source: MESSMITTEL.csv, reference date 25/09/2026."}
+        {lang === "de" ? "Stand 25.09.2026 – Auszug der ältesten Fälligkeiten." : "As of 25/09/2026 – extract of the oldest due dates."}
       </p>
     </div>
   );

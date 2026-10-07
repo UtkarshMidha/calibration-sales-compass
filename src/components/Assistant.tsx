@@ -31,6 +31,7 @@ export function AssistantDrawer() {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -38,6 +39,7 @@ export function AssistantDrawer() {
 
   /* history persists locally until the user resets it */
   useEffect(() => {
+    setMounted(true);
     setMessages(loadAssistantHistory());
     setHydrated(true);
   }, []);
@@ -161,8 +163,9 @@ export function AssistantDrawer() {
     }
   };
 
+  /* mounted-gated: window-dependent label must match the server on first render */
   const ctxLabel =
-    typeof window === "undefined"
+    !mounted || typeof window === "undefined"
       ? t("app.name")
       : app.selectedKunde
         ? `Kunde ${app.selectedKunde}${getKunde(app.selectedKunde)?.name ? ` · ${getKunde(app.selectedKunde)!.name}` : ""}`
@@ -198,10 +201,10 @@ export function AssistantDrawer() {
         </button>
       </header>
 
-      <div className="px-3 py-2 border-b border-line flex items-center gap-2 bg-surface-1">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3">{t("assistent.kontext")}</span>
-        <Chip tone="navy">{ctxLabel}</Chip>
-        <Chip tone="brand">{date(app.stichtag, lang === "de" ? "de-DE" : "en-GB")}</Chip>
+      <div className="px-3 py-2 border-b border-line flex items-center gap-2 bg-surface-1 flex-wrap">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3 shrink-0">{t("assistent.kontext")}</span>
+        <Chip tone="navy" className="max-w-[230px] truncate">{ctxLabel}</Chip>
+        <Chip tone="brand" className="shrink-0">{date(app.stichtag, lang === "de" ? "de-DE" : "en-GB")}</Chip>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3.5 py-4 space-y-4">
@@ -263,15 +266,16 @@ export function AssistantDrawer() {
           e.preventDefault();
           send(input);
         }}
-        className="p-3 border-t border-line flex items-end gap-2"
+        className="assistant-box p-3 border-t border-line flex items-end gap-2 focus-within:[&>input]:border-[#2563eb]"
       >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={t("assistent.placeholder")}
-          className="flex-1 h-[38px] px-3 rounded-[9px] border border-line bg-surface-1 focus:bg-surface-0 outline-none focus:border-brand-700 text-[13.5px] placeholder:text-ink-3 transition-colors"
+          style={{ outline: "none" }}
+          className="flex-1 min-w-0 h-[38px] px-3 rounded-[9px] border border-line bg-surface-1 focus:bg-surface-0 focus:border-[#2563eb] text-[13.5px] placeholder:text-ink-3 placeholder:truncate transition-colors"
         />
-        <Btn variant="primary" type="submit" aria-label="Senden" disabled={!input.trim()}>
+        <Btn variant="primary" type="submit" aria-label={lang === "de" ? "Senden" : "Send"} disabled={!input.trim()} className="shrink-0">
           <Send size={14} />
         </Btn>
       </form>
@@ -291,7 +295,7 @@ function PartView({ part }: { part: Part }) {
     return <p className="text-[13.5px] leading-relaxed text-ink whitespace-pre-line">{part.text}</p>;
 
   if (part.type === "quelle")
-    return <p className="text-[10.5px] text-ink-3 italic flex items-center gap-1">⌁ {part.text}</p>;
+    return <p className="text-[10.5px] text-ink-3 italic flex items-center gap-1">• {part.text}</p>;
 
   if (part.type === "empfehlungen")
     return (

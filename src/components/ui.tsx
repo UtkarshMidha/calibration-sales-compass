@@ -245,7 +245,7 @@ export function Modal({
       >
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-line">
           <h2 className="text-[15px] font-bold text-navy-800">{title}</h2>
-          <button onClick={onClose} aria-label="Schließen" className="text-ink-3 hover:text-ink p-1 rounded hover:bg-surface-2">
+          <button onClick={onClose} aria-label="Close / Schließen" className="text-ink-3 hover:text-ink p-1 rounded hover:bg-surface-2">
             <X size={16} />
           </button>
         </header>
@@ -291,92 +291,106 @@ export function Zeitstrahl({
   if (buckets.length === 0) return null;
   const needleIdx = Math.max(0, buckets.findIndex((b) => b.key >= stichtag.slice(0, 7)));
   const max = Math.max(1, ...buckets.map((b) => Math.max(b.ueberfaellig + b.faellig, b.erwartet)));
-  const height = compact ? 56 : 96;
+  const height = compact ? 64 : 104;
+  const sumOver = buckets.reduce((s, b) => s + b.ueberfaellig, 0);
+  const sumDue = buckets.reduce((s, b) => s + b.faellig, 0);
+  const L = {
+    over: lang === "en" ? "Overdue" : "Überfällig",
+    due: lang === "en" ? "Due" : "Fällig",
+    erw: lang === "en" ? "Expected" : "Erwartet",
+    heute: lang === "en" ? "Today" : "Heute",
+  };
+
+  const monthShort = (key: string) => {
+    const m = key.slice(5, 7);
+    const names = lang === "en"
+      ? { "01": "Jan", "02": "Feb", "03": "Mar", "04": "Apr", "05": "May", "06": "Jun", "07": "Jul", "08": "Aug", "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec" }
+      : { "01": "Jan", "02": "Feb", "03": "Mär", "04": "Apr", "05": "Mai", "06": "Jun", "07": "Jul", "08": "Aug", "09": "Sep", "10": "Okt", "11": "Nov", "12": "Dez" };
+    return (names as Record<string, string>)[m] ?? m;
+  };
 
   return (
     <div className="select-none">
-      <div className="relative" style={{ height }}>
-        {/* baseline */}
-        <div className="absolute left-0 right-0 bottom-0 h-px bg-line-strong" />
-        {/* month grid ticks */}
-        <div className="absolute inset-0 flex items-end gap-[3px]">
+      <div className="relative rounded-[10px] bg-gradient-to-b from-surface-1 to-surface-0 border border-line/70 px-2 pt-2" style={{ height: height + 34 }}>
+        {/* gridlines */}
+        {[0.33, 0.66].map((f) => (
+          <div key={f} className="absolute left-2 right-2 border-t border-dashed border-line" style={{ top: 8 + f * height }} />
+        ))}
+        <div className="relative flex items-end gap-[4px]" style={{ height }}>
           {buckets.map((b, i) => {
-            const isPast = i < needleIdx;
-            const isCurrent = i === needleIdx;
-            const due = b.faellig;
             const over = b.ueberfaellig;
-            const hDue = (due / max) * (height - 8);
-            const hOver = (over / max) * (height - 8);
-            const hErw = (b.erwartet / max) * (height - 8);
-            const label = `${b.key}: ${num(over)} ${lang === "en" ? "overdue" : "überfällig"}, ${num(due)} ${lang === "en" ? "due" : "fällig"}, ≈${Math.round(b.erwartet)} ${lang === "en" ? "expected" : "erwartet"}`;
+            const due = b.faellig;
+            const hOver = (over / max) * (height - 6);
+            const hDue = (due / max) * (height - 6);
+            const hErw = (b.erwartet / max) * (height - 6);
+            const isNeedle = i === needleIdx;
+            const title = `${b.key}: ${num(over)} ${L.over.toLowerCase()}, ${num(due)} ${L.due.toLowerCase()}, ≈${Math.round(b.erwartet)} ${L.erw.toLowerCase()}`;
             return (
-              <div key={b.key} title={label} className="flex-1 h-full flex flex-col justify-end relative group">
-                {hOver > 0 && (
-                  <div
-                    className="w-full rounded-t-[2px]"
-                    style={{ height: Math.max(hOver, 1.5), background: "var(--color-overdue)", opacity: isPast || isCurrent ? 0.92 : 0.3 }}
+              <div key={b.key} title={title} className="relative flex-1 h-full flex flex-col justify-end">
+                <div
+                  className="bar-grow w-full rounded-[4px] overflow-hidden flex flex-col justify-end"
+                  style={{ height: Math.max(hOver + hDue, 2), animationDelay: `${Math.min(i * 35, 600)}ms` }}
+                >
+                  {hDue > 0 && (
+                    <div style={{ height: `${(hDue / Math.max(hOver + hDue, 0.01)) * 100}%`, background: "linear-gradient(180deg,#fbbf24,#d97706)" }} />
+                  )}
+                  {hOver > 0 && (
+                    <div style={{ height: `${(hOver / Math.max(hOver + hDue, 0.01)) * 100}%`, background: "linear-gradient(180deg,#f87171,#dc2626)", opacity: isNeedle || i < needleIdx ? 1 : 0.85 }} />
+                  )}
+                </div>
+                {hErw > 1 && (
+                  <span
+                    className="absolute left-1/2 -translate-x-1/2 w-[7px] h-[7px] rounded-full bg-[#3b9ee3] ring-2 ring-white shadow"
+                    style={{ bottom: Math.min(hErw, height - 8) }}
                   />
                 )}
-                {hDue > 0 && (
-                  <div
-                    className="w-full"
-                    style={{
-                      height: Math.max(hDue, 1.5),
-                      background: "var(--color-due)",
-                      opacity: isPast ? 0.35 : 0.9,
-                    }}
-                  />
+                {isNeedle && (
+                  <span className="absolute -top-1 left-1/2 -translate-x-1/2 rounded-full bg-brand px-1.5 py-px text-[8.5px] font-bold text-white shadow whitespace-nowrap">
+                    {L.heute}
+                  </span>
                 )}
-                {hErw > 0 && (
-                  <div
-                    className="absolute left-0 right-0 h-[2px]"
-                    style={{ bottom: Math.min(hErw, height - 10), background: "var(--color-azure)", opacity: 0.95 }}
-                  />
+              </div>
+            );
+          })}
+          {/* Stichtag needle */}
+          <div
+            className="absolute top-[-4px] bottom-0 border-l-2 border-dashed pointer-events-none"
+            style={{ left: `calc(${(needleIdx / buckets.length) * 100}% )`, borderColor: "var(--color-brand)" }}
+          />
+        </div>
+        {/* month labels */}
+        <div className="flex gap-[4px] mt-1">
+          {buckets.map((b, i) => {
+            const show = compact ? i % 3 === 0 || i === needleIdx : true;
+            const jan = b.key.endsWith("-01");
+            return (
+              <div key={b.key} className="flex-1 min-w-0 text-center leading-none">
+                {show && (
+                  <>
+                    <span className={i === needleIdx ? "text-[9.5px] font-bold text-brand-700" : "text-[9.5px] text-ink-3"}>
+                      {monthShort(b.key)}
+                    </span>
+                    {jan && !compact && <span className="block text-[8px] text-ink-3/70 tnum">’{b.key.slice(2, 4)}</span>}
+                  </>
                 )}
               </div>
             );
           })}
         </div>
-        {/* Stichtag needle */}
-        <div
-          className="absolute top-[-6px] bottom-[-4px] w-px"
-          style={{
-            left: `calc(${(needleIdx / buckets.length) * 100}% - 0.5px)`,
-            background: "var(--color-brand)",
-          }}
-        >
-          <span className="absolute -top-[3px] -left-[3px] w-[7px] h-[7px] rotate-45 bg-brand rounded-[1px]" />
-        </div>
       </div>
-      {/* month labels */}
-      <div className="flex gap-[3px] mt-1.5">
-        {buckets.map((b, i) => (
-          <div
-            key={b.key}
-            className={clsx(
-              "flex-1 text-center tnum text-[9.5px] leading-none pb-0.5",
-              i === needleIdx ? "text-brand-700 font-bold" : "text-ink-3",
-              i % (compact ? 3 : 2) !== 0 && i !== needleIdx && "opacity-0",
-            )}
-          >
-            {Number(b.key.slice(5, 7))}.{" "}
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-3 mt-1 text-[10.5px] text-ink-3">
-        <Legend color="var(--color-overdue)" label={lang === "en" ? "Overdue" : "Überfällig"} />
-        <Legend color="var(--color-due)" label={lang === "en" ? "Due" : "Fällig"} />
-        <Legend color="var(--color-azure)" label={lang === "en" ? "Expected arrivals" : "Erwarteter Eingang"} />
-        <Legend color="var(--color-brand)" label={lang === "en" ? "Reference date" : "Stichtag"} />
+      <div className="flex items-center gap-2 mt-2 flex-wrap text-[10.5px] text-ink-2">
+        <LegendPill color="linear-gradient(180deg,#f87171,#dc2626)" label={`${L.over} · ${num(sumOver)}`} />
+        <LegendPill color="linear-gradient(180deg,#fbbf24,#d97706)" label={`${L.due} · ${num(sumDue)}`} />
+        <LegendPill color="#3b9ee3" dot label={L.erw} />
       </div>
     </div>
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+function LegendPill({ color, label, dot }: { color: string; label: string; dot?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="w-2.5 h-2.5 rounded-[2px]" style={{ background: color }} />
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-0 px-2 py-[3px] font-semibold">
+      <span className={dot ? "w-2 h-2 rounded-full" : "w-2.5 h-2.5 rounded-[3px]"} style={{ background: color }} />
       {label}
     </span>
   );
@@ -503,6 +517,16 @@ export function Sparkline({
 
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label={lang === "en" ? "Forecast chart" : "Prognosediagramm"}>
+      <defs>
+        <linearGradient id="spark-hist" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1c3b51" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#1c3b51" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="spark-fore" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#3b9ee3" />
+          <stop offset="100%" stopColor="#2563eb" />
+        </linearGradient>
+      </defs>
       {/* grid */}
       {[0, 0.25, 0.5, 0.75, 1].map((f) => (
         <line
@@ -521,13 +545,15 @@ export function Sparkline({
         </text>
       ))}
       {/* forecast region */}
-      <rect x={splitX} y={pad.t} width={w - pad.r - splitX} height={h - pad.t - pad.b} fill="var(--color-azure-100)" opacity="0.5" />
-      <path d={band} fill="var(--color-azure)" opacity="0.18" />
+      <rect x={splitX} y={pad.t} width={w - pad.r - splitX} height={h - pad.t - pad.b} fill="var(--color-azure-100)" opacity="0.5" rx="6" />
+      <path d={band} fill="var(--color-azure)" opacity="0.2" />
       {showBaseline && basePath && <path d={basePath} fill="none" stroke="var(--color-ink-3)" strokeWidth="1.2" strokeDasharray="5 4" />}
-      <path d={histPath} fill="none" stroke="var(--color-navy-800)" strokeWidth="2" />
-      <path d={forePath} fill="none" stroke="var(--color-azure)" strokeWidth="2.4" strokeDasharray="6 3" />
-      <line x1={splitX} x2={splitX} y1={pad.t} y2={h - pad.b} stroke="var(--color-brand)" strokeWidth="1.2" />
-      <text x={splitX + 4} y={pad.t + 10} fontSize="9.5" fontWeight="700" fill="var(--color-brand-700)">
+      <path d={`${histPath} L ${x(hist.length - 1)} ${h - pad.b} L ${x(0)} ${h - pad.b} Z`} fill="url(#spark-hist)" />
+      <path d={histPath} fill="none" stroke="var(--color-navy-800)" strokeWidth="2.2" strokeLinecap="round" />
+      <path d={forePath} fill="none" stroke="url(#spark-fore)" strokeWidth="2.6" strokeDasharray="7 4" strokeLinecap="round" />
+      <line x1={splitX} x2={splitX} y1={pad.t} y2={h - pad.b} stroke="var(--color-brand)" strokeWidth="1.4" strokeDasharray="3 3" />
+      <circle cx={splitX} cy={y(data[foreStart]?.kalibrierungen ?? min)} r="3.5" fill="var(--color-brand)" stroke="#fff" strokeWidth="1.5" />
+      <text x={splitX + 6} y={pad.t + 10} fontSize="9.5" fontWeight="700" fill="var(--color-brand-700)">
         {lang === "en" ? "Forecast" : "Prognose"}
       </text>
       {ticks.map((i) => (

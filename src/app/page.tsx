@@ -3,15 +3,30 @@
 import { ArrowRight, CalendarClock, Copy, FileText, Mail, ShieldAlert, Sparkles, Sun, TrendingUp, TriangleAlert, Wrench } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo } from "react";
-import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { useMemo, useState } from "react";
+import { Bar, BarChart, Cell, LabelList, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { HEADLINE, getCockpitAggregates, getKunde, getPrognoseGesamt } from "@/lib/data";
-import { euro, num } from "@/lib/format";
+import { dateWeekday, euro, num } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useDashboard, type RealTopKunde } from "@/lib/real-data";
 import { useApp } from "@/lib/store";
 
 const DONUT_COLORS = ["#ef4444", "#3b9ee3", "#10b981", "#8b5cf6", "#94a3b8"];
+
+const MONAT_KURZ: Record<string, { de: string; en: string }> = {
+  "01": { de: "Jan", en: "Jan" },
+  "02": { de: "Feb", en: "Feb" },
+  "03": { de: "Mär", en: "Mar" },
+  "04": { de: "Apr", en: "Apr" },
+  "05": { de: "Mai", en: "May" },
+  "06": { de: "Jun", en: "Jun" },
+  "07": { de: "Jul", en: "Jul" },
+  "08": { de: "Aug", en: "Aug" },
+  "09": { de: "Sep", en: "Sep" },
+  "10": { de: "Okt", en: "Oct" },
+  "11": { de: "Nov", en: "Nov" },
+  "12": { de: "Dez", en: "Dec" },
+};
 
 export default function DashboardPage() {
   const app = useApp();
@@ -61,9 +76,20 @@ export default function DashboardPage() {
   }, [list, t, real]);
 
   const due6 = useMemo(() => {
-    if (real) return real.dueNext6.map((d) => ({ monat: d.monat.slice(5), anzahl: d.anzahl }));
-    return forecast.map((f) => ({ monat: f.monat.slice(5), anzahl: f.kalibrierungen }));
-  }, [real, forecast]);
+    const fmt = (key: string) => {
+      const mm = key.slice(5);
+      return MONAT_KURZ[mm]?.[lang] ?? mm;
+    };
+    if (real) return real.dueNext6.map((d) => ({ monat: fmt(d.monat), anzahl: d.anzahl }));
+    return forecast.map((f) => ({ monat: fmt(f.monat), anzahl: f.kalibrierungen }));
+  }, [real, forecast, lang]);
+
+  const due6Total = useMemo(() => due6.reduce((s, d) => s + d.anzahl, 0), [due6]);
+  const due6Peak = useMemo(() => due6.reduce((a, b) => (b.anzahl > a.anzahl ? b : a), due6[0] ?? { monat: "", anzahl: 0 }), [due6]);
+
+  const donutTotal = useMemo(() => donut.reduce((s, d) => s + d.wert, 0), [donut]);
+  const donutTop = useMemo(() => donut.reduce((a, b) => (b.pct > a.pct ? b : a), donut[0] ?? { anlass: "", wert: 0, pct: 0 }), [donut]);
+  const [donutHover, setDonutHover] = useState(false);
 
   const topBranchen = useMemo(() => {
     if (real) return real.topBranchen.slice(0, 5).map((r) => ({ name: r.name, wert: r.wert, pct: r.pct }));
@@ -116,7 +142,6 @@ export default function DashboardPage() {
             </h1>
             <p className="text-white/75 text-[13px] mt-1 tnum">
               {rk?.empfehlungen ?? list.length} {lang === "de" ? "priorisierte Kunden" : "prioritized customers"} · {lang === "de" ? "Erwarteter Umsatz" : "Expected revenue"}: {euro(rk?.umsatzHeute ?? evSum, loc)}
-              {real && <span className="text-white/60"> · {lang === "de" ? "echte Snapshots" : "real snapshots"}</span>}
             </p>
           </div>
           <div className="relative z-10 hidden md:flex items-center gap-3 bg-white/95 rounded-2xl px-4 py-3 shadow-lg shrink-0">
@@ -124,7 +149,7 @@ export default function DashboardPage() {
               <Sun size={20} className="text-amber-500" />
             </span>
             <span>
-              <span className="block text-[13.5px] font-bold text-slate-900">Dienstag, 7. Oktober 2026</span>
+              <span className="block text-[13.5px] font-bold text-slate-900 tnum">{dateWeekday("2026-10-07", loc)}</span>
               <span className="block text-[12px] text-slate-500">{lang === "de" ? "Zeit, Chancen zu nutzen!" : "Time to seize opportunities!"}</span>
             </span>
           </div>
@@ -193,7 +218,7 @@ export default function DashboardPage() {
                               <span className="text-[11.5px] text-slate-400">{r.branche}</span>
                             </td>
                             <td className="px-2 py-2.5">
-                              <AnlassChip anlass="ueberfaellig" n={r.ueberfaellig} />
+                              <AnlassChip anlass="ueberfaellig" n={r.ueberfaellig} lang={lang} />
                             </td>
                             <td className="px-2 py-2.5 text-right tnum font-bold text-slate-900 whitespace-nowrap">{euro(r.ev, loc)}</td>
                             <td className="px-2 py-2.5">
@@ -219,7 +244,7 @@ export default function DashboardPage() {
                             <span className="text-[11.5px] text-slate-400">{k.branche}</span>
                           </td>
                           <td className="px-2 py-2.5">
-                            <AnlassChip anlass={item.empfehlung.anlass} n={item.empfehlung.betroffeneAnzahl} />
+                            <AnlassChip anlass={item.empfehlung.anlass} n={item.empfehlung.betroffeneAnzahl} lang={lang} />
                           </td>
                           <td className="px-2 py-2.5 text-right tnum font-bold text-slate-900 whitespace-nowrap">{euro(item.ev, loc)}</td>
                           <td className="px-2 py-2.5">
@@ -228,7 +253,7 @@ export default function DashboardPage() {
                           <td className="px-4 py-2.5">
                             <div className="flex items-center justify-end gap-1">
                               <IconBtn title="E-Mail" onClick={() => router.push(`/kunden/${k.id}`)}><Mail size={14} /></IconBtn>
-                              <IconBtn title="Angebot" onClick={() => openQuote(k.id)} accent><FileText size={14} /></IconBtn>
+                              <IconBtn title={lang === "de" ? "Angebot erstellen" : "Create quote"} onClick={() => openQuote(k.id)} accent><FileText size={14} /></IconBtn>
                             </div>
                           </td>
                         </tr>
@@ -240,7 +265,7 @@ export default function DashboardPage() {
               <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between">
                 <span className="text-[12px] text-slate-400 tnum">
                   {real
-                    ? (lang === "de" ? `Top 8 nach erwartetem Wert · echte Snapshots vom ${real.stichtag}` : `Top 8 by expected value · real snapshots of ${real.stichtag}`)
+                    ? (lang === "de" ? `Top 8 nach erwartetem Wert · Stand ${dateWeekday(real.stichtag, loc)}` : `Top 8 by expected value · as of ${dateWeekday(real.stichtag, loc)}`)
                     : (lang === "de" ? `1–8 von ${list.length} Empfehlungen` : `1–8 of ${list.length} recommendations`)}
                 </span>
                 <Link href="/tagesliste" className="text-[12.5px] font-bold text-[#2563eb] hover:underline inline-flex items-center gap-1">
@@ -252,17 +277,67 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <section className="card p-4 anim-fade-up">
                 <h3 className="text-[13px] font-bold text-slate-900">{t("dash.potenzialNachAnlass")}</h3>
-                <div className="h-[190px] mt-1">
+                <p className="text-[11.5px] text-slate-400 mt-0.5">
+                  {lang === "de"
+                    ? `Anteil am erwarteten Umsatz je Anlass – ${donutTop.anlass} ist mit ${donutTop.pct} % der größte Hebel.`
+                    : `Share of expected revenue per reason – ${donutTop.anlass} is the biggest lever at ${donutTop.pct} %.`}
+                </p>
+                <div
+                  className="h-[190px] mt-1 relative"
+                  onMouseEnter={() => setDonutHover(true)}
+                  onMouseLeave={() => setDonutHover(false)}
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={donut} dataKey="wert" nameKey="anlass" innerRadius={52} outerRadius={78} paddingAngle={2} strokeWidth={0}>
+                      <defs>
                         {donut.map((_, i) => (
-                          <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                          <linearGradient key={i} id={`donut-g-${i}`} x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor={DONUT_COLORS[i % DONUT_COLORS.length]} stopOpacity="1" />
+                            <stop offset="100%" stopColor={DONUT_COLORS[i % DONUT_COLORS.length]} stopOpacity="0.72" />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <Pie
+                        data={donut}
+                        dataKey="wert"
+                        nameKey="anlass"
+                        innerRadius={52}
+                        outerRadius={78}
+                        paddingAngle={2.5}
+                        stroke="#fff"
+                        strokeWidth={2}
+                        isAnimationActive
+                        animationDuration={850}
+                        animationEasing="ease-out"
+                      >
+                        {donut.map((_, i) => (
+                          <Cell key={i} fill={`url(#donut-g-${i})`} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v) => euro(Number(v ?? 0), loc)} />
+                      <Tooltip
+                        content={(p: unknown) => {
+                          const { active, payload } = p as {
+                            active?: boolean;
+                            payload?: { name?: string; value?: unknown }[];
+                          };
+                          if (!active || !payload || payload.length === 0) return null;
+                          const item = payload[0];
+                          return (
+                            <div className="chart-tip">
+                              <p className="font-bold">{item.name}</p>
+                              <p className="tnum">{euro(Number(item.value ?? 0), loc)}</p>
+                            </div>
+                          );
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
+                  <div className={`absolute inset-0 grid place-items-center pointer-events-none transition-opacity duration-200 ${donutHover ? "opacity-0" : "opacity-100"}`}>
+                    <div className="text-center px-2" title={euro(donutTotal, loc)}>
+                      <p className="tnum text-[16px] font-extrabold text-slate-900 leading-none whitespace-nowrap">{euroK(donutTotal, loc)}</p>
+                      <p className="text-[10.5px] text-slate-400 font-semibold mt-1">{lang === "de" ? "Gesamt" : "Total"}</p>
+                    </div>
+                  </div>
                 </div>
                 <ul className="mt-1 space-y-1">
                   {donut.map((d, i) => (
@@ -276,19 +351,53 @@ export default function DashboardPage() {
               </section>
               <section className="card p-4 anim-fade-up">
                 <h3 className="text-[13px] font-bold text-slate-900">{t("dash.faellig6m")}</h3>
+                <p className="text-[11.5px] text-slate-400 mt-0.5">
+                  {lang === "de"
+                    ? `Anzahl fälliger Messmittel je Monat – Spitze im ${due6Peak.monat} (${num(due6Peak.anzahl, 0, loc)}), gesamt ${num(due6Total, 0, loc)} für Abhol- und Kapazitätsplanung.`
+                    : `Due instruments per month – peak in ${due6Peak.monat} (${num(due6Peak.anzahl, 0, loc)}), ${num(due6Total, 0, loc)} total for pickup and capacity planning.`}
+                </p>
                 <div className="h-[190px] mt-2">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={due6.map((f) => ({ monat: f.monat, anzahl: f.anzahl }))}>
+                    <BarChart data={due6.map((f) => ({ monat: f.monat, anzahl: f.anzahl }))} margin={{ top: 14, right: 4, left: -8, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="due6-blue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#60a5fa" />
+                          <stop offset="100%" stopColor="#2563eb" />
+                        </linearGradient>
+                        <linearGradient id="due6-peak" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#fdba74" />
+                          <stop offset="100%" stopColor="#ea580c" />
+                        </linearGradient>
+                      </defs>
                       <XAxis dataKey="monat" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} />
-                      <Tooltip formatter={(v) => `${num(Number(v ?? 0), 0, loc)} ${lang === "de" ? "Messmittel" : "instruments"}`} labelFormatter={(l) => `${l}`} />
-                      <Bar dataKey="anzahl" fill="#3b9ee3" radius={[7, 7, 4, 4]} maxBarSize={34} />
+                      <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`)} width={36} />
+                      <Tooltip
+                        content={(p: unknown) => {
+                          const { active, payload, label } = p as {
+                            active?: boolean;
+                            payload?: { value?: unknown }[];
+                            label?: string;
+                          };
+                          return active && payload && payload.length > 0 ? (
+                            <div className="chart-tip">
+                              <p className="t-sub">{lang === "de" ? "Monat" : "Month"} {label}</p>
+                              <p className="font-bold tnum">{num(Number(payload[0].value ?? 0), 0, loc)} {lang === "de" ? "Messmittel fällig" : "instruments due"}</p>
+                            </div>
+                          ) : null;
+                        }}
+                        cursor={{ fill: "rgba(59,158,227,.08)" }}
+                      />
+                      <Bar dataKey="anzahl" radius={[7, 7, 4, 4]} maxBarSize={34} isAnimationActive animationDuration={800} animationEasing="ease-out">
+                        {due6.map((d, i) => (
+                          <Cell key={i} fill={d.monat === due6Peak.monat ? "url(#due6-peak)" : "url(#due6-blue)"} />
+                        ))}
+                        <LabelList dataKey="anzahl" position="top" formatter={(v: unknown) => (Number(v) >= 1000 ? `${(Number(v) / 1000).toFixed(1)}k` : `${v}`)} style={{ fontSize: 10, fill: "#64748b", fontWeight: 700 }} />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 <p className="text-[11.5px] text-slate-400 mt-1 tnum">
-                  {real
-                    ? (lang === "de" ? "Echte Fälligkeiten aus MESSMITTEL.csv (Stichtag 25.09.2026)." : "Real due dates from MESSMITTEL.csv (reference date 25/09/2026).")
-                    : (lang === "de" ? "Erwarteter Eingang aus Fälligkeiten + Rücklaufverhalten (M2)." : "Expected intake from due dates + return behaviour (M2).")}
+                  {lang === "de" ? "Fälligkeiten je Monat ab Stichtag 25.09.2026 – orange = stärkster Monat." : "Due dates per month from 25/09/2026 – orange = peak month."}
                 </p>
               </section>
             </div>
@@ -299,7 +408,7 @@ export default function DashboardPage() {
             <section className="card p-4 anim-fade-up">
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles size={15} className="text-[#7c3aed]" />
-                <h3 className="text-[13.5px] font-bold text-slate-900">KI-Assistent</h3>
+                <h3 className="text-[13.5px] font-bold text-slate-900">{lang === "de" ? "KI-Assistent" : "AI Assistant"}</h3>
                 <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 h-5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Online
                 </span>
@@ -314,7 +423,7 @@ export default function DashboardPage() {
                 {[
                   lang === "de" ? "Welche Kunden haben das höchste Potenzial?" : "Which customers have the highest potential?",
                   lang === "de" ? "Zeige mir Kunden mit überfälligen Messmitteln" : "Show customers with overdue instruments",
-                  lang === "de" ? "Erstelle einen E-Mail-Entwurf für BMW" : "Draft an email for BMW",
+                  lang === "de" ? "Erstelle einen E-Mail-Entwurf für den Top-Kunden" : "Draft an email for the top customer",
                 ].map((s) => (
                   <button key={s} onClick={() => app.setAssistantOpen(true)} className="w-full text-left text-[12.5px] px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#2563eb] hover:bg-blue-50/50 transition-colors text-slate-600 truncate">
                     {s}
@@ -364,7 +473,16 @@ export default function DashboardPage() {
   );
 }
 
-function AnlassChip({ anlass, n }: { anlass: string; n: number }) {
+function euroK(v: number, loc: string): string {
+  if (Math.abs(v) >= 10000) {
+    const k = (v / 1000).toLocaleString(loc, { maximumFractionDigits: 1, minimumFractionDigits: 0 });
+    return `≈ ${k}k €`;
+  }
+  return euro(v, loc);
+}
+
+function AnlassChip({ anlass, n, lang }: { anlass: string; n: number; lang?: string }) {
+  const en = lang === "en";
   const map: Record<string, string> = {
     ueberfaellig: "bg-red-50 text-red-600 border-red-100",
     faellig_bald: "bg-blue-50 text-blue-700 border-blue-100",
@@ -372,13 +490,21 @@ function AnlassChip({ anlass, n }: { anlass: string; n: number }) {
     branche: "bg-emerald-50 text-emerald-700 border-emerald-100",
     portal: "bg-amber-50 text-amber-700 border-amber-100",
   };
-  const label: Record<string, string> = {
-    ueberfaellig: `Überfällig (${n})`,
-    faellig_bald: `Fällig`,
-    abwanderung: `Churn-Risiko`,
-    branche: `Branchenpotenzial`,
-    portal: `Portal`,
-  };
+  const label: Record<string, string> = en
+    ? {
+        ueberfaellig: `Overdue (${n})`,
+        faellig_bald: `Due soon`,
+        abwanderung: `Churn risk`,
+        branche: `Industry potential`,
+        portal: `Portal`,
+      }
+    : {
+        ueberfaellig: `Überfällig (${n})`,
+        faellig_bald: `Fällig`,
+        abwanderung: `Churn-Risiko`,
+        branche: `Branchenpotenzial`,
+        portal: `Portal`,
+      };
   return (
     <span className={`inline-flex items-center h-6 px-2.5 rounded-full border text-[11.5px] font-semibold whitespace-nowrap ${map[anlass] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
       {label[anlass] ?? anlass}

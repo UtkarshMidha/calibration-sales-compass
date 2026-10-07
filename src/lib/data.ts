@@ -713,7 +713,7 @@ export interface Einstellungen {
 
 export const DEFAULT_EINSTELLUNGEN: Einstellungen = {
   stundensatz: 90,
-  kapazitaet: 20,
+  kapazitaet: 12,
   cooldown: 14,
   risikoSchwelle: 0.5,
   erfolgschancen: { ...ANLASS_ERFOLGSCHANCE },
@@ -1088,7 +1088,7 @@ export function getModellguete(): Modellkarte[] {
   return [
     {
       id: "M1M2",
-      titel: "M1/M2 · Rücklauf & Fälligkeitsprognose",
+      titel: "Rücklauf & Fälligkeitsprognose",
       was: {
         de: "Schätzt, wann Kunden ihre fälligen Messmittel tatsächlich einschicken – inklusive Neukalibrierungen.",
         en: "Estimates when customers actually send in due instruments – including first-time calibrations.",
@@ -1109,7 +1109,7 @@ export function getModellguete(): Modellkarte[] {
     },
     {
       id: "M3",
-      titel: "M3 · Abwanderungsrisiko",
+      titel: "Abwanderungsrisiko",
       was: {
         de: "LightGBM-Klassifikator mit TreeSHAP-Erklärungen; Wahrscheinlichkeit, dass das Volumen in 6 Monaten unter die Hälfte der Erwartung fällt.",
         en: "LightGBM classifier with TreeSHAP explanations; probability that volume falls below half of expectation within 6 months.",
@@ -1130,7 +1130,7 @@ export function getModellguete(): Modellkarte[] {
     },
     {
       id: "M4",
-      titel: "M4 · Auftragsvolumen",
+      titel: "Auftragsvolumen",
       was: {
         de: "Bottom-up-Prognose: Summe der Einzelwahrscheinlichkeiten je Monat, plus Erstkalibrierungen, mit 80-%-Band.",
         en: "Bottom-up forecast: sum of individual probabilities per month plus first-time calibrations, with an 80% band.",
@@ -1151,7 +1151,7 @@ export function getModellguete(): Modellkarte[] {
     },
     {
       id: "M5",
-      titel: "M5 · Branchenpotenzial",
+      titel: "Branchenpotenzial",
       was: {
         de: "Vergleicht das Portfolio eines Kunden mit aktiven Branchen-Peers und zeigt Gruppen, die der Kunde bei uns noch nicht kalibriert.",
         en: "Compares a customer's portfolio with active industry peers and shows groups not yet calibrated with us.",
@@ -1172,7 +1172,7 @@ export function getModellguete(): Modellkarte[] {
     },
     {
       id: "Ranking",
-      titel: "Ranking · Rückblick 25.03.2026",
+      titel: "Ranking-Check · Rückblick 25.03.2026",
       was: {
         de: "Misst, ob Kunden mit hoher Priorität danach tatsächlich unter Erwartung lagen – der ehrlichste Test des Rankings.",
         en: "Measures whether high-priority customers did fall below expectation afterwards – the honest test of the ranking.",

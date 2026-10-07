@@ -67,6 +67,7 @@ export default function HeutePage() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [spaeterOpen, setSpaeterOpen] = useState(false);
   const [warum, setWarum] = useState(false);
+  const [fokus, setFokus] = useState(false);
 
   const list = app.tagesliste;
   const success = useErfolgschance();
@@ -129,6 +130,14 @@ export default function HeutePage() {
     app.toast(t("toast.uebernommen"));
   }, [selectedItem, app, t]);
 
+  const openDetail = useCallback(
+    (kundeId: string) => {
+      app.setSelectedKunde(kundeId);
+      setFokus(true);
+    },
+    [app],
+  );
+
   const openEmail = useCallback(() => {
     if (selectedItem) setEmailOpen(true);
   }, [selectedItem]);
@@ -155,12 +164,14 @@ export default function HeutePage() {
       else if (key === "s") { e.preventDefault(); if (selectedItem) setSpaeterOpen(true); }
       else if (key === "enter" && selectedItem) {
         e.preventDefault();
-        router.push(`/kunden/${selectedItem.kundeId}`);
+        setFokus(true);
+      } else if (key === "escape") {
+        if (!ergebnisOpen && !emailOpen && !spaeterOpen) setFokus(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [move, claimIt, openEmail, openQuote, selectedItem, router]);
+  }, [move, claimIt, openEmail, openQuote, selectedItem, ergebnisOpen, emailOpen, spaeterOpen]);
 
   const high = list.filter((i) => i.prioritaet === "hoch").length;
   const doneCount = Object.keys(app.done).length;
@@ -214,7 +225,8 @@ export default function HeutePage() {
         </div>
       </div>
 
-      {/* ---------------- toolbar: Suche + Anlass + Priorität + Nur meine ---------------- */}
+      {/* ---------------- toolbar (nur in der Listenansicht) ---------------- */}
+      {!fokus && (
       <div className="px-5 pb-3 flex items-center gap-2 flex-wrap shrink-0">
         <label className="inline-flex items-center gap-1.5 h-[30px] pl-2 pr-1.5 rounded-[8px] border border-line bg-surface-0 focus-within:border-brand-700 transition-colors w-[190px]">
           <Search size={13} className="text-ink-3 shrink-0" />
@@ -260,11 +272,12 @@ export default function HeutePage() {
           {filtered.length} / {list.length} {lang === "de" ? "Empfehlungen" : "recommendations"}
         </span>
       </div>
+      )}
 
-      {/* ---------------- split view ---------------- */}
-      <div className="flex-1 min-h-0 flex px-5 pb-4 gap-4">
-        {/* list */}
-        <section className="w-full lg:w-[52%] xl:w-[48%] min-w-0 flex flex-col card overflow-hidden">
+      {/* ---------------- Liste (vollflächig) oder Fokus-Ansicht ---------------- */}
+      {!fokus ? (
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
+        <div className="max-w-4xl mx-auto card overflow-hidden">
           <div className="px-4 py-2.5 border-b border-line bg-surface-1 flex items-center gap-3">
             <h2 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2">{t("heute.tagesliste")}</h2>
             <div className="flex-1 max-w-[220px]">
@@ -274,9 +287,13 @@ export default function HeutePage() {
                 label={t("heute.fortschritt", { done: doneCount, total: app.settings.kapazitaet })}
               />
             </div>
+            <div className="flex-1" />
+            <span className="hidden sm:block text-[11px] text-ink-3">
+              {lang === "de" ? "Klicken oder Enter für Details" : "Click or Enter for details"}
+            </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto divide-y divide-[var(--color-line)]">
+          <div className="divide-y divide-[var(--color-line)]">
             {filtered.length === 0 && (
               <EmptyState
                 title={list.length === 0 ? t("heute.allesErledigt") : t("heute.leerFilter")}
@@ -296,7 +313,7 @@ export default function HeutePage() {
               return (
                 <button
                   key={item.kundeId}
-                  onClick={() => app.setSelectedKunde(item.kundeId)}
+                  onClick={() => openDetail(item.kundeId)}
                   className={clsx(
                     "w-full text-left px-4 py-3 relative transition-colors",
                     isSel ? "bg-brand-50/70" : "hover:bg-surface-1",
@@ -333,28 +350,28 @@ export default function HeutePage() {
               );
             })}
           </div>
-        </section>
-
-        {/* detail pane */}
-        <section className="hidden lg:flex flex-1 min-w-0 flex-col card overflow-hidden anim-fade-in">
-          {selectedItem && kunde ? (
-            <DetailPane
-              key={selectedItem.kundeId}
-              item={selectedItem}
-              warum={warum}
-              setWarum={setWarum}
-              onClaim={claimIt}
-              onEmail={() => setEmailOpen(true)}
-              onQuote={openQuote}
-              onDone={() => setErgebnisOpen(true)}
-              onLater={() => setSpaeterOpen(true)}
-              onField={() => app.toast(lang === "de" ? `Übergabe an Gebiet ${kunde.gebiet} erstellt.` : `Handed over to region ${kunde.gebiet}.`)}
-            />
-          ) : (
-            <EmptyState title={t("heute.keineAuswahl")} hint={t("heute.keineAuswahlHint")} />
-          )}
-        </section>
+        </div>
       </div>
+      ) : selectedItem && kunde ? (
+      /* ---------------- Fokus-Ansicht: ein Kunde, vollflächig ---------------- */
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
+        <div className="max-w-5xl mx-auto card overflow-hidden anim-fade-in">
+          <DetailPane
+            key={selectedItem.kundeId}
+            item={selectedItem}
+            warum={warum}
+            setWarum={setWarum}
+            onClaim={claimIt}
+            onEmail={() => setEmailOpen(true)}
+            onQuote={openQuote}
+            onDone={() => setErgebnisOpen(true)}
+            onLater={() => setSpaeterOpen(true)}
+            onField={() => app.toast(lang === "de" ? `Übergabe an Gebiet ${kunde.gebiet} erstellt.` : `Handed over to region ${kunde.gebiet}.`)}
+            onBack={() => setFokus(false)}
+          />
+        </div>
+      </div>
+      ) : null}
 
       {/* ---------------- dialogs ---------------- */}
       {selectedItem && kunde && (
@@ -450,6 +467,7 @@ function DetailPane({
   onDone,
   onLater,
   onField,
+  onBack,
 }: {
   item: { kundeId: string; empfehlung: Empfehlung; ev: number; prioritaet: Prioritaet };
   warum: boolean;
@@ -460,6 +478,7 @@ function DetailPane({
   onDone: () => void;
   onLater: () => void;
   onField: () => void;
+  onBack: () => void;
 }) {
   const app = useApp();
   const { t, lang } = useI18n();
@@ -483,6 +502,16 @@ function DetailPane({
 
   return (
     <>
+      {/* zurück */}
+      <div className="px-5 pt-3 flex items-center gap-3">
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[8px] text-[12.5px] font-bold text-ink-2 hover:bg-surface-1 hover:text-brand-700 transition-colors">
+          <ArrowRight size={13} className="rotate-180" /> {lang === "de" ? "Tagesliste" : "Daily list"}
+        </button>
+        <span className="flex-1" />
+        <Link href={`/kunden/${k.id}`} className="text-[12px] font-bold text-brand-700 hover:underline inline-flex items-center gap-1">
+          {t("empf.kunde360")} <ArrowRight size={12} />
+        </Link>
+      </div>
       {/* header */}
       <div className="px-5 pt-4 pb-3 border-b border-line">
         <div className="flex items-start gap-3">
@@ -519,7 +548,9 @@ function DetailPane({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+      <div className="px-5 py-4">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px] items-start">
+          <div className="space-y-5 min-w-0">
         {/* Begründung */}
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -605,6 +636,8 @@ function DetailPane({
           </div>
         </div>
 
+          </div>
+          <aside className="space-y-4 min-w-0">
         {/* Kontakt */}
         <div>
           <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2 mb-2">
@@ -625,39 +658,70 @@ function DetailPane({
             </div>
           </div>
         </div>
+
+        {/* Details */}
+        <div>
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2 mb-2">
+            {lang === "de" ? "Details" : "Details"}
+          </h3>
+          <dl className="card p-3.5 space-y-2 text-[12.5px]">
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-ink-3">{t("k360.kundeSeit")}</dt>
+              <dd className="tnum font-semibold text-ink">{k.seit}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-ink-3">{t("k360.aktiveMessmittel")}</dt>
+              <dd className="tnum font-semibold text-ink">{k.aktiv}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-ink-3">{t("k360.ruecklauf")}</dt>
+              <dd className="tnum font-semibold text-ink">{Math.round(k.ruecklauf.quote * 100)} %</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-ink-3">{lang === "de" ? "Versand nach Fälligkeit" : "Dispatch after due date"}</dt>
+              <dd className="tnum font-semibold text-ink">+{k.ruecklauf.lag} d</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-ink-3">{t("k360.kanalMix")}</dt>
+              <dd className="tnum font-semibold text-ink">{k.kanal.portal} % Portal</dd>
+            </div>
+          </dl>
+        </div>
+          </aside>
+        </div>
       </div>
 
-      {/* action bar */}
-      <div className="border-t border-line px-4 py-3 bg-surface-1 flex items-center gap-1.5 flex-wrap">
+      {/* action bar: eine einzige, klar gewichtete Zeile */}
+      <div className="sticky bottom-0 border-t border-line px-4 py-3 bg-surface-1/95 backdrop-blur flex items-center gap-1.5 overflow-x-auto">
         {!claim ? (
-          <Btn variant="primary" onClick={onClaim} title="Ü">
+          <Btn variant="dark" onClick={onClaim} title="Ü" className="shrink-0">
             <UserCheck size={14} /> {t("akt.uebernehmen")}
           </Btn>
         ) : (
-          <Btn variant="secondary" disabled title="Ü">
+          <Btn variant="secondary" disabled title="Ü" className="shrink-0">
             <Check size={14} /> {claim === app.user.id ? t("akt.uebernehmen") : t("akt.uebernommen", { name: USERS.find((u) => u.id === claim)?.kurz ?? "–" })}
           </Btn>
         )}
         <a
           href={`tel:${k.telefon.replace(/[^0-9+]/g, "")}`}
-          className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-[7px] text-[13px] font-semibold bg-surface-0 text-ink border border-line-strong hover:bg-surface-1 hover:border-ink-3 transition-all"
+          className="shrink-0 inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-[10px] text-[13px] font-semibold bg-surface-0 text-ink border border-line-strong hover:bg-surface-1 hover:border-ink-3 transition-all"
         >
           <Phone size={14} /> {t("akt.anrufen")}
         </a>
-        <Btn variant="secondary" onClick={onEmail} title="E">
+        <Btn variant="secondary" onClick={onEmail} title="E" className="shrink-0">
           <Mail size={14} /> {t("akt.email")}
         </Btn>
-        <Btn variant="dark" onClick={onQuote} title="A">
+        <Btn variant="secondary" onClick={onQuote} title="A" className="shrink-0">
           <FileTextIcon /> {t("akt.angebot")}
         </Btn>
-        <div className="flex-1" />
-        <Btn variant="ghost" onClick={onLater} title="S">
+        <div className="flex-1 min-w-2" />
+        <Btn variant="ghost" onClick={onLater} title="S" className="shrink-0">
           <Timer size={14} /> {t("akt.spaeter")}
         </Btn>
-        <Btn variant="ghost" onClick={onField}>
+        <Btn variant="ghost" onClick={onField} className="shrink-0">
           <MapPin size={14} /> <span className="hidden xl:inline">{t("akt.aussendienst")}</span>
         </Btn>
-        <Btn variant="primary" onClick={onDone} title="D">
+        <Btn variant="primary" onClick={onDone} title="D" className="shrink-0 shadow-[0_6px_16px_-8px_rgba(184,78,0,.7)]">
           <Check size={14} /> {t("akt.erledigt")}
         </Btn>
       </div>
@@ -871,7 +935,7 @@ function EmailDialog({ open, onClose, kundeId, emp }: { open: boolean; onClose: 
           {t("leitfaden.titel")}
         </button>
         <span className="flex-1" />
-        <span className="text-[11px] text-ink-3">{tab === "mail" ? t("email.sieForm") : "≤ 150 Wörter"}</span>
+        <span className="text-[11px] text-ink-3">{tab === "mail" ? t("email.sieForm") : lang === "de" ? "≤ 150 Wörter" : "≤ 150 words"}</span>
       </div>
 
       {tab === "mail" && (

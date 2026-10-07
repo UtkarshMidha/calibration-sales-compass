@@ -7,7 +7,6 @@ import {
   ChevronDown,
   Download,
   Mail,
-  Printer,
   Sparkles,
   Trash2,
   X,
@@ -18,6 +17,7 @@ import { useState } from "react";
 import { getKunde } from "@/lib/data";
 import { addDays, date, euro } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { buildQuotePdf, downloadQuotePdf } from "@/lib/pdf";
 import { useApp, type DraftLine } from "@/lib/store";
 import { Btn, Chip, DemoBadge, EmptyState } from "@/components/ui";
 
@@ -84,6 +84,20 @@ export default function AngebotPage() {
   const print = () => {
     if (!draft.exportiert) patch({ exportiert: true });
     setTimeout(() => window.print(), 60);
+  };
+
+  const downloadPdf = () => {
+    const blob = buildQuotePdf({
+      draft,
+      kunde: k,
+      repName: t(app.user.nameKey),
+      repKurz: app.user.kurz,
+      stundensatz,
+      lang,
+    });
+    downloadQuotePdf(blob, `${lang === "de" ? "Angebotsentwurf" : "Quote-draft"}-${draft.id}.pdf`);
+    if (!draft.exportiert) patch({ exportiert: true });
+    app.toast(lang === "de" ? "PDF erstellt und heruntergeladen." : "PDF created and downloaded.");
   };
 
   return (
@@ -157,8 +171,8 @@ export default function AngebotPage() {
             </p>
             <p className="mt-3 leading-relaxed text-ink-2">
               {lang === "de"
-                ? `vielen Dank für Ihr Vertrauen. Für Ihre ${menge} fälligen bzw. überfälligen Messmittel (${k.branche}, ${k.ort}) bieten wir die Kalibrierung wie folgt an. Die Prüfungsart können Sie je Position umstellen – ab 01.01.2026 gilt die DAkkS-Kalibrierung als Standard.`
-                : `thank you for your trust. For your ${menge} due or overdue instruments (${k.branche}, ${k.ort}) we offer the calibration as follows. You can change the test type per line – since 01/01/2026 DAkkS calibration is the standard.`}
+                ? `vielen Dank für Ihr Vertrauen. Für Ihre ${menge} fälligen bzw. überfälligen Messmittel (${k.branche}, ${k.ort}) bieten wir die Kalibrierung wie folgt an. Die Prüfungsart können Sie je Position umstellen – ab 01.01.2026 gilt die DAkkS-Kalibrierung (Deutsche Akkreditierungsstelle, staatlich akkreditiert) als Standard.`
+                : `thank you for your trust. For your ${menge} due or overdue instruments (${k.branche}, ${k.ort}) we offer the calibration as follows. You can change the test type per line – since 01/01/2026 DAkkS calibration (German accreditation body, state-accredited) is the standard.`}
             </p>
 
             {/* positions */}
@@ -383,8 +397,8 @@ export default function AngebotPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 mt-3">
-              <Btn variant="primary" onClick={print}>
-                <Printer size={14} /> {t("angebot.pdf")}
+              <Btn variant="primary" onClick={downloadPdf}>
+                <Download size={14} /> {t("angebot.pdf")}
               </Btn>
               <Btn variant="secondary" onClick={() => router.push("/")}>
                 <ArrowLeft size={14} /> {t("angebot.zurueck")}
@@ -392,8 +406,8 @@ export default function AngebotPage() {
             </div>
             <p className="text-[11px] text-ink-3 mt-2">
               {lang === "de"
-                ? "Der Druckdialog erzeugt das PDF (A4, DIN-5008-ähnlich)."
-                : "The print dialog produces the PDF (A4, DIN 5008-like)."}
+                ? "Lädt das vollständige PDF (Anschreiben, Positionen, Messmittel-Anlage, Hinweise)."
+                : "Downloads the complete PDF (letter, lines, instrument annex, notes)."}
             </p>
           </div>
 
@@ -410,7 +424,7 @@ export default function AngebotPage() {
                 {t("angebot.allesWerk")}
               </Btn>
             </div>
-            <p className="text-[11px] text-ink-3 mt-2">
+            <p className="text-[11px] text-ink-3 mt-2" title={lang === "de" ? "DAkkS = Deutsche Akkreditierungsstelle (staatlich akkreditiert)" : "DAkkS = German accreditation body (state-accredited)"}>
               {lang === "de" ? "DAkkS = ×1,35 zum Richtpreis." : "DAkkS = ×1.35 of the guide price."}
             </p>
           </div>

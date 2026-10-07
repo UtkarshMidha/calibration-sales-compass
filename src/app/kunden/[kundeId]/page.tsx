@@ -197,24 +197,26 @@ export default function Kunde360Page() {
         </div>
       </div>
 
-      {/* ---------------- tabs: 3 statt 4 — Historie bündelt Aktivität + Prognose + Lücken ---------------- */}
-      <div className="flex items-center gap-1.5 mt-4 mb-3 border-b border-line pb-2">
-        {TABS.map((tb) => (
-          <button
-            key={tb}
-            onClick={() => setTab(tb)}
-            className={clsx(
-              "h-[30px] px-3 rounded-[8px] text-[12.5px] font-semibold transition-colors",
-              tab === tb ? "bg-navy-800 text-white" : "text-ink-2 hover:bg-surface-2",
-            )}
-          >
-            {tb === "uebersicht"
-              ? t("k360.uebersicht")
-              : tb === "messmittel"
-                ? t("k360.messmittelliste")
-                : lang === "de" ? "Historie & Potenzial" : "History & potential"}
-          </button>
-        ))}
+      {/* ---------------- tabs ---------------- */}
+      <div className="flex items-center gap-2 mt-4 mb-3 flex-wrap">
+        <div className="inline-flex items-center gap-1 rounded-xl bg-surface-0 border border-line p-1 shadow-[0_1px_2px_rgba(16,41,58,.06)]">
+          {TABS.map((tb) => (
+            <button
+              key={tb}
+              onClick={() => setTab(tb)}
+              className={clsx(
+                "h-[30px] px-3.5 rounded-[9px] text-[12.5px] font-semibold transition-all",
+                tab === tb ? "bg-navy-800 text-white shadow" : "text-ink-3 hover:text-ink hover:bg-surface-1",
+              )}
+            >
+              {tb === "uebersicht"
+                ? t("k360.uebersicht")
+                : tb === "messmittel"
+                  ? t("k360.messmittelliste")
+                  : lang === "de" ? "Historie & Potenzial" : "History & potential"}
+            </button>
+          ))}
+        </div>
         <div className="flex-1" />
         <span className="hidden sm:block text-[11.5px] text-ink-3">
           {lang === "de" ? "24 Monate Historie · 12 Monate Prognose" : "24 months history · 12 months forecast"}
@@ -323,7 +325,9 @@ export default function Kunde360Page() {
             </div>
             <div className="flex items-center gap-4 mt-3 text-[11px] text-ink-3">
               <LegendDot color="var(--color-navy-800)" label={t("common.anzahl")} />
-              <LegendDot color="var(--color-azure)" label={t("k360.dakksAnteil")} />
+              <span title={lang === "de" ? "DAkkS = Deutsche Akkreditierungsstelle (staatlich akkreditiert)" : "DAkkS = German accreditation body (state-accredited)"}>
+                <LegendDot color="var(--color-azure)" label={t("k360.dakksAnteil")} />
+              </span>
               <LegendDot color="var(--color-violet)" label={t("k360.nioAnteil")} />
             </div>
           </section>
@@ -401,7 +405,10 @@ export default function Kunde360Page() {
                         {r.typ} <span className="text-ink-3">({r.groesse})</span>
                       </td>
                       <td className="px-3 py-1.5">
-                        <span className={clsx("text-[11.5px] font-semibold", r.pruefungsart === "DAkkS" ? "text-azure-800" : "text-ink-3")}>
+                        <span
+                          title={lang === "de" ? "DAkkS = Deutsche Akkreditierungsstelle (staatlich akkreditiert)" : "DAkkS = German accreditation body (state-accredited)"}
+                          className={clsx("text-[11.5px] font-semibold", r.pruefungsart === "DAkkS" ? "text-azure-800" : "text-ink-3")}
+                        >
                           {r.pruefungsart}
                         </span>
                       </td>
@@ -649,9 +656,6 @@ function RealKundeView({ kundeId }: { kundeId: string }) {
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-[20px] font-bold text-navy-800 leading-tight tnum">Kunde {row.kunde}</h2>
-            <span className="inline-flex items-center h-[18px] px-1.5 rounded border border-emerald-300 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
-              CSV
-            </span>
           </div>
           <p className="text-[13px] text-ink-2 mt-0.5">{row.branche}</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
@@ -667,8 +671,8 @@ function RealKundeView({ kundeId }: { kundeId: string }) {
           </Btn>
           <span className="text-[11.5px] text-ink-3">
             {lang === "de"
-              ? "Echte Zähldaten aus dem Snapshot – Namen und Kontakte sind nicht im Datensatz."
-              : "Real counts from the snapshot – names and contacts are not in the dataset."}
+              ? "Gezählte Werte (Stand 25.09.2026) – Namen und Kontakte sind Demo."
+              : "Counted values (as of 25/09/2026) – names and contacts are demo."}
           </span>
         </div>
       </div>
@@ -681,7 +685,7 @@ function RealKundeView({ kundeId }: { kundeId: string }) {
         </div>
         {myMm.length === 0 ? (
           <p className="px-4 pb-4 text-[13px] text-ink-3">
-            {lang === "de" ? "Keine Sample-Zeilen für diesen Kunden im Snapshot-Auszug." : "No sample rows for this customer in the snapshot extract."}
+            {lang === "de" ? "Keine weiteren Zeilen für diesen Kunden in diesem Auszug." : "No further rows for this customer in this extract."}
           </p>
         ) : (
           <div className="overflow-x-auto max-h-[52vh]">

@@ -6,7 +6,7 @@ import { type Anlass } from "@/lib/data";
 import { STICHTAGE, date, euro, num, pct } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useApp, useErfolgschance } from "@/lib/store";
-import { Btn, Chip, DemoBadge, Progress, Segmented } from "@/components/ui";
+import { Btn, DemoBadge, Progress, Segmented } from "@/components/ui";
 
 const ANLASS_ORDER: Anlass[] = ["faellig_bald", "ueberfaellig", "abwanderung", "branche", "portal"];
 const SECTION_HEAD = "text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2";
@@ -33,20 +33,42 @@ export default function EinstellungenPage() {
             <Info size={13} className="shrink-0 mt-[3px] text-ink-3" />
             <span>
               {lang === "de"
-                ? "Änderungen wirken sofort auf der Tagesliste – die Rangfolge ändert sich nie. Einige Werte greifen erst ab dem nächsten Pipeline-Lauf."
-                : "Changes apply immediately to the daily list – the ranking order never changes. A few values only take effect from the next pipeline run."}
+                ? "Hier stellen Sie Ihre Arbeitsansicht ein: wie viele Empfehlungen Sie sehen und mit welchen Werten gerechnet wird. Fahren Sie mit der Maus über eine Zeile für eine Erklärung."
+                : "Set up your workspace here: how many recommendations you see and which values are used. Hover a row for an explanation."}
             </span>
           </p>
         </div>
 
-        {/* ---------------- Tagesliste / Parameter ---------------- */}
+        {/* ---------------- Tagesliste / Anzeige ---------------- */}
         <section className="card px-4 py-3">
           <h2 className={SECTION_HEAD}>
-            {lang === "de" ? "Tagesliste / Parameter" : "Daily list / Parameters"}
+            {lang === "de" ? "Tagesliste & Anzeige" : "Daily list & display"}
           </h2>
 
           <div className="mt-1.5 divide-y divide-[var(--color-line)]">
-            <Row htmlFor="stundensatz" label={t("einst.stundensatz")} hint={t("einst.stundensatzHint")}>
+            <Row
+              htmlFor="kapazitaet"
+              label={lang === "de" ? "Anzahl Empfehlungen" : "Number of recommendations"}
+              hint={lang === "de" ? "So viele Kunden stehen auf Ihrer Tagesliste – die höchsten €-Werte zuerst." : "How many customers are on your daily list – highest € values first."}
+              title={lang === "de" ? "Länge Ihrer Tagesliste" : "Length of your daily list"}
+            >
+              <input
+                id="kapazitaet"
+                type="number"
+                min={1}
+                max={100}
+                value={app.settings.kapazitaet}
+                onChange={(e) => app.patchSettings({ kapazitaet: Number(e.target.value) })}
+                className={clsx(INPUT, "w-24 text-right")}
+              />
+            </Row>
+
+            <Row
+              htmlFor="stundensatz"
+              label={t("einst.stundensatz")}
+              hint={lang === "de" ? "Nur für Anzeige und Angebots-Richtpreise – die Reihenfolge Ihrer Liste ändert sich nie." : "Display and quote guide prices only – your list order never changes."}
+              title={lang === "de" ? "Verrechnungssatz für die €-Schätzung" : "Hourly rate for the € estimate"}
+            >
               <div className="flex flex-col items-end gap-1">
                 <div className="flex items-center gap-2">
                   <input
@@ -67,19 +89,12 @@ export default function EinstellungenPage() {
               </div>
             </Row>
 
-            <Row htmlFor="kapazitaet" label={t("einst.kapazitaet")}>
-              <input
-                id="kapazitaet"
-                type="number"
-                min={1}
-                max={100}
-                value={app.settings.kapazitaet}
-                onChange={(e) => app.patchSettings({ kapazitaet: Number(e.target.value) })}
-                className={clsx(INPUT, "w-24 text-right")}
-              />
-            </Row>
-
-            <Row htmlFor="cooldown" label={t("einst.cooldown")}>
+            <Row
+              htmlFor="cooldown"
+              label={lang === "de" ? "Pause nach Ergebnis (Tage)" : "Pause after outcome (days)"}
+              hint={lang === "de" ? "Kunden mit protokolliertem Ergebnis bleiben so lange von der Liste – niemand wird doppelt angerufen." : "Customers with a logged outcome stay off the list this long – nobody gets called twice."}
+              title={lang === "de" ? "Karenzzeit nach einem Ergebnis" : "Cooldown after an outcome"}
+            >
               <input
                 id="cooldown"
                 type="number"
@@ -91,7 +106,12 @@ export default function EinstellungenPage() {
               />
             </Row>
 
-            <Row htmlFor="risikoSchwelle" label={t("einst.risikoSchwelle")}>
+            <Row
+              htmlFor="risikoSchwelle"
+              label={lang === "de" ? "Risiko-Schwelle" : "Risk threshold"}
+              hint={lang === "de" ? "Ab welcher Risiko-Prozentzahl ein Kunde als „Abwanderungsrisiko“ auf die Liste kommt." : "From which risk percentage a customer joins the list as “churn risk”."}
+              title={lang === "de" ? "Schwelle für den Anlass Abwanderungsrisiko" : "Threshold for the churn-risk reason"}
+            >
               <input
                 id="risikoSchwelle"
                 type="range"
@@ -106,37 +126,21 @@ export default function EinstellungenPage() {
                 {pct(app.settings.risikoSchwelle, 0, loc)}
               </span>
             </Row>
-
-            <Row htmlFor="fensterFaellig" label={t("einst.faelligFenster")}>
-              <input
-                id="fensterFaellig"
-                readOnly
-                aria-readonly="true"
-                value={lang === "de" ? "30–60 Tage" : "30–60 days"}
-                className={clsx(INPUT, "w-32 text-right bg-surface-1 text-ink-2")}
-              />
-            </Row>
-
-            <Row htmlFor="fensterUeberfaellig" label={t("einst.ueberfaelligFenster")}>
-              <input
-                id="fensterUeberfaellig"
-                readOnly
-                aria-readonly="true"
-                value={lang === "de" ? "15–548 Tage" : "15–548 days"}
-                className={clsx(INPUT, "w-32 text-right bg-surface-1 text-ink-2")}
-              />
-            </Row>
-          </div>
-
-          <div className="pt-2.5">
-            <Chip tone="due">{t("einst.pipelineWirkung")}</Chip>
           </div>
         </section>
 
-        {/* ---------------- Erfolgschance ---------------- */}
-        <section className="card px-4 py-3">
-          <h2 className={SECTION_HEAD}>{t("einst.erfolgschance")}</h2>
-          <p className="text-[12px] text-ink-3 mt-0.5">{t("einst.erfolgschanceHint")}</p>
+        {/* ---------------- Erweitert (Modell-Annahmen) ---------------- */}
+        <details className="card px-4 py-3 group">
+          <summary className="cursor-pointer list-none flex items-center gap-2">
+            <h2 className={SECTION_HEAD}>{lang === "de" ? "Erweitert: Erfolgsannahmen" : "Advanced: success assumptions"}</h2>
+            <span className="text-[11px] text-ink-3 group-open:hidden">+</span>
+            <span className="text-[11px] text-ink-3 hidden group-open:inline">–</span>
+          </summary>
+          <p className="text-[12px] text-ink-3 mt-1">
+            {lang === "de"
+              ? "Mit welcher Wahrscheinlichkeit ein Anlass zum Auftrag führt – Startwert plus das, was aus Ihren Ergebnissen gelernt wurde."
+              : "How likely a reason turns into an order – starting value plus what was learned from your outcomes."}
+          </p>
 
           <div className="mt-2.5 overflow-x-auto rounded-[10px] border border-line">
             <table className="w-full text-[12.5px]">
@@ -217,12 +221,16 @@ export default function EinstellungenPage() {
               </span>
             ))}
           </div>
-        </section>
+        </details>
 
         {/* ---------------- Stichtag ---------------- */}
         <section className="card px-4 py-3">
           <h2 className={SECTION_HEAD}>{t("einst.stichtag")}</h2>
-          <p className="text-[12px] text-ink-3 mt-0.5">{t("einst.stichtagHint")}</p>
+          <p className="text-[12px] text-ink-3 mt-0.5">
+            {lang === "de"
+              ? "Zu welchem Datum die Liste berechnet wird – zum Vergleichen, z. B. heute vs. vor 6 Monaten."
+              : "Which date the list is calculated for – to compare, e.g. today vs. 6 months ago."}
+          </p>
           <div className="mt-2.5 flex items-center gap-3 flex-wrap">
             <Segmented
               value={app.stichtag}
@@ -232,18 +240,20 @@ export default function EinstellungenPage() {
             <Calendar size={14} className="text-ink-3" />
             <span className="text-[11.5px] text-ink-3">
               {lang === "de"
-                ? "Der Wechsel des Stichtags baut die Tagesliste deterministisch neu."
-                : "Switching the reference date rebuilds the daily list deterministically."}
+                ? "Aktuell 2 Stichtage – weitere kommen mit dem nächsten Datenlauf."
+                : "Currently 2 reference dates – more arrive with the next data run."}
             </span>
           </div>
         </section>
 
-        {/* ---------------- LLM ---------------- */}
-        <section className="card px-4 py-3">
-          <div className="flex items-center gap-1.5">
+        {/* ---------------- KI-Nutzung (Info) ---------------- */}
+        <details className="card px-4 py-3 group">
+          <summary className="cursor-pointer list-none flex items-center gap-1.5">
             <Brain size={13} className="text-ink-3" />
             <h2 className={SECTION_HEAD}>{t("einst.llm")}</h2>
-          </div>
+            <span className="text-[11px] text-ink-3 group-open:hidden">+</span>
+            <span className="text-[11px] text-ink-3 hidden group-open:inline">–</span>
+          </summary>
 
           <div className="mt-2.5">
             <Progress value={318} total={1000} label={`${num(318, 0, loc)} / ${num(1000, 0, loc)}`} />
@@ -263,7 +273,7 @@ export default function EinstellungenPage() {
                 : "The quotas are demo figures – nothing is billed."}
             </span>
           </p>
-        </section>
+        </details>
 
         {/* ---------------- footer ---------------- */}
         <div className="flex items-center gap-3 flex-wrap pb-2">
@@ -288,15 +298,18 @@ function Row({
   htmlFor,
   label,
   hint,
+  title,
   children,
 }: {
   htmlFor: string;
   label: string;
   hint?: string;
+  title?: string;
   children: React.ReactNode;
 }) {
   return (
     <div
+      title={title}
       className={clsx(
         "flex justify-between gap-4 py-2.5",
         hint ? "items-start" : "items-center",

@@ -94,8 +94,8 @@ export default function AngebotePage() {
 
         <p className="mt-3 text-[12px] text-slate-400">
           {lang === "de"
-            ? "Richtpreise (Schätzung aus Bearbeitungszeit × Stundensatz). DAkkS ist seit 01.01.2026 Standard."
-            : "Guide prices (processing time × hourly rate). DAkkS is the default since 01/01/2026."}{" "}
+            ? "Richtpreise (Schätzung aus Bearbeitungszeit × Stundensatz). DAkkS (Deutsche Akkreditierungsstelle) ist seit 01.01.2026 Standard."
+            : "Guide prices (processing time × hourly rate). DAkkS (German accreditation body) is the default since 01/01/2026."}{" "}
           {euro(app.settings.stundensatz, loc, false)}/h.
         </p>
       </div>

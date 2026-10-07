@@ -3,13 +3,11 @@
 import clsx from "clsx";
 import {
   ChartColumn,
-  CircleHelp,
-  Command,
   FileText,
   LayoutDashboard,
   ListChecks,
-  Rocket,
   Ruler,
+  Search,
   Settings as SettingsIcon,
   ShieldCheck,
   Sparkles,
@@ -111,9 +109,9 @@ export function Shell({ children }: { children: ReactNode }) {
       >
         <Icon size={17} strokeWidth={active ? 2.2 : 1.9} className={clsx(active ? "text-white" : "text-slate-400")} />
         <span className="truncate">{t(item.key)}</span>
-        {item.href === "/tagesliste" && !active && (
+        {item.href === "/tagesliste" && !active && app.tagesliste.length > 0 && (
           <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold grid place-items-center tnum">
-            12
+            {app.tagesliste.length}
           </span>
         )}
       </Link>
@@ -131,16 +129,16 @@ export function Shell({ children }: { children: ReactNode }) {
             </span>
             <span className="leading-tight">
               <span className="block text-[14.5px] font-extrabold tracking-tight text-slate-900">PeCal Kompass</span>
-              <span className="block text-[11px] text-slate-400 font-medium">Ihr KI-Vertriebsassistent</span>
+              <span className="block text-[11px] text-slate-400 font-medium">{t("app.unter")}</span>
             </span>
           </Link>
           <button
             onClick={() => app.setPaletteOpen(true)}
-            className="mt-3.5 w-full flex items-center gap-2 h-9 pl-3 pr-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 transition-colors text-slate-400"
+            title={lang === "de" ? "Suchen (Strg+K)" : "Search (Ctrl+K)"}
+            className="mt-3.5 w-full flex items-center gap-2 h-9 pl-3 pr-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 transition-colors text-slate-400 hover:text-slate-600"
           >
-            <Command size={13} />
+            <Search size={14} className="shrink-0" />
             <span className="text-[12.5px] flex-1 text-left font-medium">{t("header.suche")}</span>
-            <Kbd>⌘K</Kbd>
           </button>
         </div>
 
@@ -265,28 +263,6 @@ export function Shell({ children }: { children: ReactNode }) {
               { value: "en", label: "EN", title: "English" },
             ]}
           />
-
-          <button
-            onClick={() => (app.pitch ? app.resetPitch() : app.applyPitch())}
-            title={app.pitch ? t("header.pitchReset") : t("header.pitchAn")}
-            className={clsx(
-              "flex items-center gap-1.5 h-[30px] px-2.5 rounded-full border text-[11.5px] font-bold uppercase tracking-wide transition-colors",
-              app.pitch
-                ? "bg-brand-700 border-brand-700 text-white"
-                : "border-line-strong text-ink-3 hover:text-brand-700 hover:border-brand-700",
-            )}
-          >
-            <Rocket size={13} />
-            Pitch
-          </button>
-
-          <button
-            onClick={() => app.setHelpOpen(true)}
-            title={t("help.titel")}
-            className="w-8 h-8 grid place-items-center rounded-[10px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-          >
-            <CircleHelp size={17} />
-          </button>
         </header>
 
         {/* mobile nav */}
@@ -356,8 +332,8 @@ export function Shell({ children }: { children: ReactNode }) {
             ["A", t("help.a")],
             ["D", t("help.d")],
             ["S", t("help.s")],
-            ["⌘K / Strg+K", t("help.k")],
-            ["⌘J / Strg+J", t("help.j2")],
+            ["Strg+K", t("help.k")],
+            ["Strg+J", t("help.j2")],
             ["?", t("help.hilfe")],
           ] as const).map(([key, label]) => (
             <li key={key} className="flex items-center justify-between gap-4 text-[13.5px]">
@@ -387,15 +363,10 @@ function Datenstand() {
   const n = real?.kpis.ueberfaellig ?? 64915;
   return (
     <div className="leading-tight">
-      <p className="text-[11.5px] font-bold text-slate-800">Datenstand 25.09.2026</p>
+      <p className="text-[11.5px] font-bold text-slate-800">{lang === "de" ? "Datenstand 25.09.2026" : "Data as of 25/09/2026"}</p>
       <p className="tnum text-[11px] text-slate-500">
         {num(n, 0, loc)} {lang === "de" ? "überfällige Messmittel" : "overdue instruments"}
       </p>
-      {real && (
-        <p className="text-[10px] text-emerald-600 font-semibold">
-          {lang === "de" ? "● echte CSV-Snapshots" : "● real CSV snapshots"}
-        </p>
-      )}
     </div>
   );
 }

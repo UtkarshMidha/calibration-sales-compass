@@ -87,6 +87,14 @@ body {
 }
 
 :focus-visible {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+select:focus-visible,
+summary:focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
   border-radius: 4px;
@@ -317,7 +325,42 @@ body {
   overflow: visible;
 }
 
-/* ---------- print (Angebotsentwurf, DIN 5008-ish) ---------- */
+/* ---------- charts: motion + polish ---------- */
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.bar-grow {
+  transform-origin: bottom;
+  transform-box: fill-box;
+  animation: bar-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.chart-tip {
+  border-radius: 12px;
+  border: 1px solid var(--color-line);
+  background: rgb(255 255 255 / 0.98);
+  box-shadow: var(--shadow-pop);
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-ink);
+  max-width: 240px;
+}
+.chart-tip .t-sub {
+  color: var(--color-ink-3);
+  font-size: 11px;
+}
+
+/* command palette + assistant: soft blue focus instead of the global brand outline */
+.cmdk input:focus-visible,
+.assistant-box input:focus-visible {
+  outline: none;
+}
 @media print {
   @page {
     size: A4;

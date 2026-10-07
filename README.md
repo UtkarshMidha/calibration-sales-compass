@@ -19,16 +19,27 @@ Weitere Skripte:
 | `npm run build`     | Produktions-Build           |
 | `npm run start`     | Produktionsserver           |
 | `npm run typecheck` | TypeScript-Prüfung (`tsc`)  |
+| `npm run data:build`| Kennzahlen aus `database_tables/*.csv` neu berechnen → `public/data/*.json` |
+
+## Daten & Zählweisen (wichtig für die Demo)
+
+- **Echte Messwerte** (`npm run data:build`, Python, Stichtag 25.09.2026): 65.282 überfällige Messmittel bei 2.424 Kunden, 10.994 fällig (30 Tage) bei 699 Kunden, 6.525 Kunden, 488.699 Messmittel. Dashboard-KPIs, Top-Kunden, Fälligkeits-Balken, Kunden- und Messmittel-Seiten lesen diese JSON-Dateien (`public/data/`).
+- **Warum 12 überall?** Die Tageslisten-Länge = Einstellung „Anzahl Empfehlungen" (Standard 12, änderbar unter Einstellungen). Dashboard-Top-Liste, Sidebar-Badge und Fortschritt zeigen denselben Wert.
+- **Zwei verschiedene Rankings, gleiche Länge:** Das Dashboard ordnet echte Überfälligkeiten nach €-Wert; die Tagesliste priorisiert Modell-Empfehlungen aus 5 Anlässen (Überfällig, Fällig, Abwanderung, Branche, Portal) nach erwartetem Wert. Namen/Kontakte bleiben Demo (nicht im Datensatz).
+- **Modellgüte-Werte sind statisch eingebettet** (Holdout-Messung 06.10.2026); jeder Pipeline-Lauf berechnet sie neu.
+- **Stichtage:** 25.09.2026 und 25.03.2026 (Rückblick). Weitere folgen mit dem nächsten Datenlauf.
 
 ## Screens
 
-- **Heute** (`/`) — Tagesliste (Kapazität 20), Anlass-/Prioritätsfilter, schnelle Ergebnis-Erfassung (Ergebnis, Wiedervorlage, E-Mail-Vorlage), Detail-Pane mit Herleitung, Zeitstrahl und Empfehlung (EV = Stunden × Stundensatz × Erfolgschance × Dringlichkeit).
-- **Kunden** (`/kunden`) — Vollsortiment durchsuch-/filterbar (Branche, Gebiet, Sortierung), tief verlinkbar über `?branche=`/`?gebiet=`.
-- **Kunde-360** (`/kunden/[kundeId]`) — Risiko-Gauge, Zeitstrahl der Rückläufer, Lückenmatrix (Gegenstück besitzt X), Aktivitätsverlauf 24 Monate, Messmittelliste mit CSV-Export, Kundenprognose (12 Monate, 80-%-Band), Kontaktverlauf.
-- **Angebotsentwurf** (`/angebote/[id]`) — Richtpreis-Editor (DAkkS/Werk-Toggle je Position, Einzelposten entfernen, Logistik), DIN-5008-artiges Layout mit ENTWURF-Wasserzeichen, **Als PDF drucken** (Browser-Druckdialog, `@page A4`).
-- **Cockpit** (`/cockpit`) — KPIs, Prognose mit Baseline-Vergleich, At-Risk nach Branche/Gebiet (klickbar → Kundenliste), Team-Aktivität, Erfolgsquote, Verlustgründe.
-- **Modellgüte** (`/modellguete`) — Rücklauf-Histogramm, Precision@k gegen Baselines, Prognoseband, Kalibrierungskurve, Prioritäten-Wirksamkeit, Datenqualität, Modellannahmen, Assistenten-Evaluation.
-- **Einstellungen** (`/einstellungen`) — Stundensatz, Tageslisten-Kapazität, Cooldown, Risiko-Schwelle, gelernte Erfolgschancen (Prior vs. Pipeline), Stichtag-Umschalter, LLM-Quoten.
+- **Dashboard** (`/`) — echte Kennzahlen (Stand 25.09.2026), Top-Empfehlungen nach €-Wert, Umsatzpotenzial-Donut, Fälligkeits-Balken (6 Monate), KI-Assistent-Overlay, Schnellaktionen, Top-Branchen.
+- **Tagesliste** (`/tagesliste`) — priorisierte Modell-Empfehlungen (Länge = Einstellung, Standard 12), Suche + Anlass-/Prioritätsfilter, Ergebnis-Erfassung; Klick/Enter öffnet die Fokus-Ansicht (ein Kunde, vollflächig, Esc/zurück zur Liste).
+- **Kunden** (`/kunden`) — echte Kundennummern/Branchen durchsuch-/filterbar, tief verlinkbar.
+- **Kunde-360** (`/kunden/[kundeId]`) — Modellkunden: Risiko-Gauge, Zeitstrahl, Lückenmatrix, 24M-Historie, Messmittelliste mit Export, 12M-Prognose, Kontaktverlauf; echte Kundennummern: kompakte Zähldaten + Messmittel-Auszug.
+- **Messmittel** (`/messmittel`) — Auszug der ältesten Fälligkeiten mit Statusfiltern (mit Erklärung per Hover).
+- **Angebote** (`/angebote`, `/angebote/[id]`) — Richtpreis-Editor (DAkkS = Deutsche Akkreditierungsstelle, ×1,35), DIN-5008-artiges Layout mit ENTWURF-Wasserzeichen, **Als PDF drucken**.
+- **Cockpit** (`/cockpit`, nur Leitung) — KPIs, Prognose mit Baseline-Vergleich (Hover-Erklärung), Umsatz in Gefahr je Branche/Gebiet mit Fazit-Satz, Team-Aktivität.
+- **Developer** (`/modellguete`) — Modellkarten in Klartext, Bereinigungs-Übersicht, Annahmen, Assistenten-Evaluation.
+- **Einstellungen** (`/einstellungen`) — Tageslisten-Länge, Stundensatz, Pause nach Ergebnis, Risiko-Schwelle, Stichtag; Erweitertes (Erfolgsannahmen, KI-Nutzung) eingeklappt.
 
 ## Demo-Hinweise (bewusst)
 
@@ -51,4 +62,4 @@ src/
                  format (Datums-/Währungshelfer)
 ```
 
-Tastatur: `⌘/Strg+K` Command-Palette · `?` Hilfe · `Esc` schließen.
+Tastatur: `Strg+K` Suche · `Strg+J` Assistent · `J/K` blättern · `Enter` öffnen · `Esc` zurück · `?` Hilfe.

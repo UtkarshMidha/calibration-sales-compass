@@ -59,6 +59,13 @@ export default function CockpitPage() {
 
   const agg = getCockpitAggregates();
 
+  const prognose = getPrognoseGesamt(app.stichtag);
+  const f12 = prognose.filter((d) => !d.historie);
+  const fTotal = f12.reduce((s, d) => s + d.kalibrierungen, 0);
+  const fPeak = f12.reduce((a, b) => (b.kalibrierungen > a.kalibrierungen ? b : a), f12[0]);
+  const fLast = f12[f12.length - 1];
+  const fBandPct = fLast ? Math.round(((fLast.p90 - fLast.p10) / Math.max(1, fLast.kalibrierungen)) * 50) : 0;
+
   const kpis = [
     {
       label: t("cockpit.kpi.faellig3m"),
@@ -138,6 +145,11 @@ export default function CockpitPage() {
         actions={
           <button
             onClick={() => setShowBaseline((v) => !v)}
+            title={
+              lang === "de"
+                ? "Saison-naive Baseline: nimmt den Vorjahresmonat als Prognose. Dient als Vergleich – liegt unsere Prognose näher an der Wirklichkeit, lohnt sich das Modell."
+                : "Seasonal-naive baseline: uses last year's month as the forecast. Serves as comparison – if our forecast is closer to reality, the model earns its keep."
+            }
             className={clsx(
               "inline-flex items-center gap-2 h-[30px] px-2.5 rounded-[8px] border text-[12px] font-semibold transition-all",
               showBaseline
@@ -159,6 +171,25 @@ export default function CockpitPage() {
       >
         <div className="px-4 pb-4">
           <Sparkline data={getPrognoseGesamt(app.stichtag)} showBaseline={showBaseline} lang={lang} height={200} />
+          <div className="mt-3 grid sm:grid-cols-3 gap-2">
+            <div className="rounded-[10px] bg-surface-1 border border-line px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3">{lang === "de" ? "Prognose 12 Monate" : "12-month forecast"}</p>
+              <p className="tnum text-[16px] font-bold text-navy-800">{num(fTotal, 0, loc)}</p>
+            </div>
+            <div className="rounded-[10px] bg-surface-1 border border-line px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3">{lang === "de" ? "Stärkster Monat" : "Peak month"}</p>
+              <p className="tnum text-[16px] font-bold text-navy-800">{fPeak.monat.slice(5)}/{fPeak.monat.slice(2, 4)} · {num(fPeak.kalibrierungen, 0, loc)}</p>
+            </div>
+            <div className="rounded-[10px] bg-surface-1 border border-line px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3">{lang === "de" ? "Unsicherheit am Ende" : "Uncertainty at end"}</p>
+              <p className="tnum text-[16px] font-bold text-navy-800">± {num(fBandPct, 0, loc)} %</p>
+            </div>
+          </div>
+          <p className="text-[12px] text-ink-2 mt-2.5 leading-relaxed">
+            {lang === "de"
+              ? "Lesart für die Leitung: Dunkelblau ist gemessene Vergangenheit, gestrichelt die Modellprognose mit 80-%-Band. Richten Sie Kapazität und Abhol-Touren am Spitzenmonat aus; das Band zeigt, wie viel Puffer Sie einplanen sollten."
+              : "Reading for leadership: dark blue is measured history, dashed is the model forecast with an 80% band. Align capacity and pickup tours with the peak month; the band shows how much buffer to plan."}
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-ink-3">
             <span className="inline-flex items-center gap-1.5">
               <span className="w-4 h-[3px] rounded-full bg-navy-800" />
@@ -177,6 +208,18 @@ export default function CockpitPage() {
               {lang === "de" ? "Baseline (Saison-naiv)" : "Baseline (seasonal-naive)"}
             </span>
           </div>
+          <p
+            className="mt-2 text-[11.5px] text-ink-3 leading-relaxed cursor-help underline decoration-dotted underline-offset-2"
+            title={
+              lang === "de"
+                ? "Die Baseline prognostiziert stur den Vorjahresmonat. Unser Modell muss sie schlagen – sonst lohnt es sich nicht."
+                : "The baseline stubbornly predicts last year's month. Our model must beat it – otherwise it is not worth it."
+            }
+          >
+            {lang === "de"
+              ? "Was ist die Baseline? Hovern für Erklärung – sie zeigt, ob das Modell besser ist als „wie letztes Jahr“."
+              : "What is the baseline? Hover for an explanation – it shows whether the model beats “like last year”."}
+          </p>
         </div>
       </Card>
 
@@ -246,8 +289,20 @@ function RiskBars({
   hint?: string;
 }) {
   const max = Math.max(...rows.map((r) => r.wert), 1);
+  const total = rows.reduce((s, r) => s + r.wert, 0) || 1;
+  const top = rows[0];
+  const topPct = Math.round((top.wert / total) * 100);
+  const { lang } = useI18n();
+  const story =
+    lang === "de"
+      ? `${top.key} trägt ${topPct} % des gefährdeten Umsatzes (${euro(top.wert, loc)}) – dort zuerst gegensteuern, dann der Reihe nach abarbeiten.`
+      : `${top.key} carries ${topPct} % of revenue at risk (${euro(top.wert, loc)}) – countersteer there first, then work down the list.`;
   return (
     <Card className="anim-fade-up" title={title} hint={hint}>
+      <p className="px-4 pt-0.5 pb-2 text-[12.5px] leading-relaxed text-ink-2 border-b border-line mb-2">
+        <strong className="text-navy-800">{lang === "de" ? "Fazit: " : "Takeaway: "}</strong>
+        {story}
+      </p>
       <div className="px-4 pb-4 pt-0.5 space-y-0.5">
         {rows.map((r) => (
           <Link

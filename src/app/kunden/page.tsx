@@ -53,15 +53,12 @@ export default function KundenPage() {
           <div>
             <h2 className="text-[17px] font-bold text-navy-800 flex items-center gap-2">
               {t("kunden.titel")}
-              <span className="inline-flex items-center h-[18px] px-1.5 rounded border border-emerald-300 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
-                CSV
-              </span>
             </h2>
             <p className="text-[12.5px] text-ink-3 tnum">
               {t("kunden.treffer", { n: num(realFiltered.length, 0, loc) })}
               {branche !== "alle" ? ` · ${branche}` : ""}
               {" · "}
-              {lang === "de" ? "echte Snapshots (MESSMITTEL + Kunde_Branche)" : "real snapshots (MESSMITTEL + Kunde_Branche)"}
+              {lang === "de" ? "Stand 25.09.2026" : "As of 25/09/2026"}
             </p>
           </div>
 
@@ -164,8 +161,8 @@ export default function KundenPage() {
 
         <p className="mt-3 text-[11.5px] text-ink-3">
           {lang === "de"
-            ? "Echte Kundennummern und Branchen aus dem Snapshot; Namen und Kontakte sind nicht im Datensatz (Demo)."
-            : "Real customer numbers and industries from the snapshot; names and contacts are not in the dataset (demo)."}
+            ? "Echte Kundennummern und Branchen (Stand 25.09.2026); Namen und Kontakte sind Demo."
+            : "Real customer numbers and industries (as of 25/09/2026); names and contacts are demo."}
         </p>
       </div>
     );

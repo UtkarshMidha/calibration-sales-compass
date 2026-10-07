@@ -108,27 +108,25 @@ export default function ModellguetePage() {
           title={t("modell.datenqualitaet")}
           hint={
             lang === "de"
-              ? "Regeln, die der Pipeline-Lauf auf die Rohdaten angewendet hat."
-              : "Rules the pipeline run applied to the raw data."
+              ? "Was vor dem Rechnen bereinigt wurde – und wie viele Messmittel es betrifft."
+              : "What was cleaned before computing – and how many instruments it affects."
           }
         >
           <div className="pb-3.5 overflow-x-auto">
             <table className="w-full text-[12.5px]">
               <thead>
                 <tr className="bg-surface-1 text-[10.5px] uppercase tracking-wider text-ink-3">
-                  <th className="text-left font-bold px-3 py-1.5">{lang === "de" ? "Regel" : "Rule"}</th>
-                  <th className="text-right font-bold px-3 py-1.5">{lang === "de" ? "Betroffen" : "Affected"}</th>
                   <th className="text-left font-bold px-3 py-1.5">
-                    {lang === "de" ? "Beschreibung" : "Description"}
+                    {lang === "de" ? "Bereinigung" : "Cleanup"}
                   </th>
+                  <th className="text-right font-bold px-3 py-1.5">{lang === "de" ? "Betroffen" : "Affected"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-line)]">
                 {DQ_REPORT.map((r, i) => (
                   <tr key={`${r.regel}-${i}`} className="even:bg-surface-1/60">
-                    <td className="px-3 py-1.5 tnum font-semibold text-navy-800">{r.regel}</td>
-                    <td className="px-3 py-1.5 tnum text-right text-ink-2">{num(r.betroffen, 0, loc)}</td>
                     <td className="px-3 py-1.5 text-ink">{r.beschreibung[lang]}</td>
+                    <td className="px-3 py-1.5 tnum text-right text-ink-2 whitespace-nowrap">{num(r.betroffen, 0, loc)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -170,8 +168,7 @@ export default function ModellguetePage() {
           <table className="w-full text-[12.5px]">
             <thead>
               <tr className="bg-surface-1 text-[10.5px] uppercase tracking-wider text-ink-3">
-                <th className="text-left font-bold px-3 py-1.5">ID</th>
-                <th className="text-left font-bold px-3 py-1.5">{lang === "de" ? "Titel" : "Title"}</th>
+                <th className="text-left font-bold px-3 py-1.5">{lang === "de" ? "Annahme" : "Assumption"}</th>
                 <th className="text-left font-bold px-3 py-1.5">{t("common.wert")}</th>
                 <th className="text-left font-bold px-3 py-1.5">{t("modell.quelle")}</th>
                 <th className="text-left font-bold px-3 py-1.5">{t("modell.status")}</th>
@@ -180,7 +177,6 @@ export default function ModellguetePage() {
             <tbody className="divide-y divide-[var(--color-line)]">
               {ANNAHMEN.map((a) => (
                 <tr key={a.id} className="even:bg-surface-1/60">
-                  <td className="px-3 py-1.5 tnum font-semibold text-navy-800 whitespace-nowrap">{a.id}</td>
                   <td className="px-3 py-1.5 text-ink font-medium min-w-[200px]">{a.titel}</td>
                   <td className="px-3 py-1.5 tnum text-ink-2 whitespace-nowrap">{a.wert}</td>
                   <td className="px-3 py-1.5 text-ink-2 min-w-[240px]">{a.quelle}</td>
@@ -203,8 +199,8 @@ export default function ModellguetePage() {
         <Info size={13} className="shrink-0 mt-0.5" />
         <span>
           {lang === "de"
-            ? "Alle Kennzahlen stammen aus dem Pipeline-Lauf (Holdout), Baselines in Klammern bzw. in der Baseline-Spalte – ehrlich gemessen, nichts geschönt. Wird ein Ziel verfehlt, wird die Baseline ausgeliefert."
-            : "All metrics come from the pipeline run (holdout), baselines in parentheses and in the baseline column – honestly measured, nothing smoothed. When a target is missed, the baseline is shipped."}
+            ? "Alle Kennzahlen stammen aus der Holdout-Messung vom 06.10.2026 – ehrlich gemessen, nichts geschönt. In dieser Demo sind sie fest eingebettet; jeder Pipeline-Lauf berechnet sie neu."
+            : "All metrics come from the holdout measurement of 06/10/2026 – honestly measured, nothing smoothed. They are embedded in this demo; every pipeline run recalculates them."}
         </span>
       </p>
     </div>
