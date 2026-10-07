@@ -4,6 +4,5 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 data/
-*.csv
 .env.local
 .env
