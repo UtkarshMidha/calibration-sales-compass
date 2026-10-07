@@ -36,7 +36,7 @@ Weitere Skripte:
 - **Kunden** (`/kunden`) — echte Kundennummern/Branchen durchsuch-/filterbar, tief verlinkbar.
 - **Kunde-360** (`/kunden/[kundeId]`) — Modellkunden: Risiko-Gauge, Zeitstrahl, Lückenmatrix, 24M-Historie, Messmittelliste mit Export, 12M-Prognose, Kontaktverlauf; echte Kundennummern: kompakte Zähldaten + Messmittel-Auszug.
 - **Messmittel** (`/messmittel`) — Auszug der ältesten Fälligkeiten mit Statusfiltern (mit Erklärung per Hover).
-- **Angebote** (`/angebote`, `/angebote/[id]`) — Richtpreis-Editor (DAkkS = Deutsche Akkreditierungsstelle, ×1,35), DIN-5008-artiges Layout mit ENTWURF-Wasserzeichen, **Als PDF drucken**.
+- **Angebote** (`/angebote`, `/angebote/[id]`) — Richtpreis-Editor (DAkkS = Deutsche Akkreditierungsstelle, ×1,35); **PDF herunterladen** erzeugt ein mehrseitiges Dokument (Anschreiben, Positionen, vollständige Messmittel-Anlage, Hinweise, Fußzeilen mit Seitenzahlen) via `src/lib/pdf.ts` (jsPDF + autotable; Smoke-Test: `scripts/pdf-smoke.ts`).
 - **Cockpit** (`/cockpit`, nur Leitung) — KPIs, Prognose mit Baseline-Vergleich (Hover-Erklärung), Umsatz in Gefahr je Branche/Gebiet mit Fazit-Satz, Team-Aktivität.
 - **Developer** (`/modellguete`) — Modellkarten in Klartext, Bereinigungs-Übersicht, Annahmen, Assistenten-Evaluation.
 - **Einstellungen** (`/einstellungen`) — Tageslisten-Länge, Stundensatz, Pause nach Ergebnis, Risiko-Schwelle, Stichtag; Erweitertes (Erfolgsannahmen, KI-Nutzung) eingeklappt.

@@ -23,6 +23,12 @@ function lineUnit(minuten: number, art: "Werk" | "DAkkS", stundensatz: number): 
   return Math.round(raw / 0.1) * 0.1;
 }
 
+/* autotable sets doc.lastAutoTable at runtime (see drawTable); read it defensively */
+function lastY(doc: jsPDF, fallback: number): number {
+  const t = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable;
+  return typeof t?.finalY === "number" ? t.finalY : fallback;
+}
+
 function money(v: number, loc: string): string {
   return new Intl.NumberFormat(loc, { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
 }
@@ -271,7 +277,7 @@ export function buildQuotePdf({ draft, kunde, repName, repKurz, stundensatz, lan
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let cy = (doc as any).lastAutoTable.finalY + 4;
+  let cy = lastY(doc, y + 4) + 4;
 
   /* logistics */
   const logRows: [string, string][] = [];
@@ -288,7 +294,7 @@ export function buildQuotePdf({ draft, kunde, repName, repKurz, stundensatz, lan
       columnStyles: { 1: { halign: "right" } },
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cy = (doc as any).lastAutoTable.finalY + 4;
+    cy = lastY(doc, cy) + 4;
   }
 
   /* totals */
@@ -317,7 +323,7 @@ export function buildQuotePdf({ draft, kunde, repName, repKurz, stundensatz, lan
     },
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  cy = (doc as any).lastAutoTable.finalY + 3;
+  cy = lastY(doc, cy) + 3;
   doc.setFontSize(8);
   doc.setTextColor(...GREY);
   doc.text(t.guide, W - M, cy, { align: "right" });
@@ -407,7 +413,7 @@ export function buildQuotePdf({ draft, kunde, repName, repKurz, stundensatz, lan
         headStyles: { fillColor: [53, 106, 140], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ay = (doc as any).lastAutoTable.finalY + 7;
+      ay = lastY(doc, ay + 2) + 7;
     }
   }
 

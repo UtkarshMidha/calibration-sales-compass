@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ChevronRight, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { BRANCHEN, getEmpfehlungFuer, getKunden } from "@/lib/data";
@@ -11,7 +11,8 @@ import { useKundenIndex } from "@/lib/real-data";
 import { useApp } from "@/lib/store";
 import { Btn, Chip, DemoBadge, EmptyState } from "@/components/ui";
 
-type Sort = "ueberfaellig" | "aktiv" | "name" | "letzte";
+type Sort = "ueberfaellig" | "aktiv" | "name" | "letzte" | "branche";
+type Dir = "asc" | "desc";
 
 export default function KundenPage() {
   const app = useApp();
@@ -22,7 +23,17 @@ export default function KundenPage() {
   const [q, setQ] = useState("");
   const [branche, setBranche] = useState("alle");
   const [sort, setSort] = useState<Sort>("ueberfaellig");
+  const [dir, setDir] = useState<Dir>("desc");
   const [limit, setLimit] = useState(50);
+
+  const pickSort = (key: Sort) => {
+    if (key === sort) {
+      setDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSort(key);
+      setDir(key === "name" || key === "branche" ? "asc" : "desc");
+    }
+  };
 
   const branchen = useMemo(() => {
     if (realRows) return [...new Set(realRows.map((r) => r.branche))].sort();
@@ -38,12 +49,15 @@ export default function KundenPage() {
       return true;
     });
     return [...out].sort((a, b) => {
-      if (sort === "name") return a.kunde.localeCompare(b.kunde);
-      if (sort === "aktiv") return b.aktiv - a.aktiv;
-      if (sort === "letzte") return (b.letzteKal ?? "").localeCompare(a.letzteKal ?? "");
-      return b.ueberfaellig - a.ueberfaellig || b.aktiv - a.aktiv;
+      let cmp: number;
+      if (sort === "name") cmp = a.kunde.localeCompare(b.kunde);
+      else if (sort === "branche") cmp = a.branche.localeCompare(b.branche, "de");
+      else if (sort === "aktiv") cmp = a.aktiv - b.aktiv;
+      else if (sort === "letzte") cmp = (a.letzteKal ?? "").localeCompare(b.letzteKal ?? "");
+      else cmp = a.ueberfaellig - b.ueberfaellig || a.aktiv - b.aktiv;
+      return dir === "asc" ? cmp : -cmp;
     });
-  }, [realRows, q, branche, sort]);
+  }, [realRows, q, branche, sort, dir]);
 
   if (realFiltered) {
     const active = q !== "" || branche !== "alle";
@@ -93,7 +107,7 @@ export default function KundenPage() {
 
             <select
               value={sort}
-              onChange={(e) => setSort(e.target.value as Sort)}
+              onChange={(e) => { const v = e.target.value as Sort; setSort(v); setDir(v === "name" || v === "branche" ? "asc" : "desc"); }}
               title={t("kunden.sortieren")}
               className="h-[34px] rounded-[9px] border border-line bg-surface-0 px-2.5 text-[12.5px] font-semibold text-ink outline-none focus:border-brand-700 cursor-pointer"
             >
@@ -116,11 +130,11 @@ export default function KundenPage() {
             <table className="w-full text-[13px] min-w-[760px]">
               <thead>
                 <tr className="bg-surface-1 border-b border-line text-[10.5px] uppercase tracking-wider text-ink-3">
-                  <th className="text-left font-bold px-4 py-2.5">{t("angebot.kundenr")}</th>
-                  <th className="text-left font-bold px-3 py-2.5">{t("heute.branche")}</th>
-                  <th className="text-right font-bold px-3 py-2.5">{t("k360.aktiveMessmittel")}</th>
-                  <th className="text-right font-bold px-3 py-2.5">{t("anlass.ueberfaellig")}</th>
-                  <th className="text-right font-bold px-3 py-2.5">{t("k360.letzteKal")}</th>
+                  <Th label={t("angebot.kundenr")} align="left" active={sort === "name"} dir={dir} onClick={() => pickSort("name")} />
+                  <Th label={t("heute.branche")} align="left" active={sort === "branche"} dir={dir} onClick={() => pickSort("branche")} />
+                  <Th label={t("k360.aktiveMessmittel")} align="right" active={sort === "aktiv"} dir={dir} onClick={() => pickSort("aktiv")} />
+                  <Th label={t("anlass.ueberfaellig")} align="right" active={sort === "ueberfaellig"} dir={dir} onClick={() => pickSort("ueberfaellig")} />
+                  <Th label={t("k360.letzteKal")} align="right" active={sort === "letzte"} dir={dir} onClick={() => pickSort("letzte")} last />
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-line)]">
@@ -169,6 +183,28 @@ export default function KundenPage() {
   }
 
   return <SyntheticFallback q={q} setQ={setQ} sort={sort} setSort={setSort} limit={limit} setLimit={setLimit} />;
+}
+
+function Th({ label, align, active, dir, onClick, last }: {
+  label: string; align: "left" | "right"; active: boolean; dir: Dir; onClick: () => void; last?: boolean;
+}) {
+  const Icon = active ? (dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={clsx("font-bold p-0", align === "left" ? "text-left" : "text-right", last ? "px-4" : "px-3")}>
+      <button
+        onClick={onClick}
+        title={label}
+        className={clsx(
+          "inline-flex items-center gap-1 py-2.5 uppercase tracking-wider transition-colors",
+          align === "right" && "flex-row-reverse",
+          active ? "text-brand-700" : "text-ink-3 hover:text-ink",
+        )}
+      >
+        {label}
+        <Icon size={11} className={active ? "opacity-100" : "opacity-40"} />
+      </button>
+    </th>
+  );
 }
 
 function SyntheticFallback({ q, setQ, sort, setSort, limit, setLimit }: {

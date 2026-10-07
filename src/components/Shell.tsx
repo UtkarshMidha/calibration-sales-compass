@@ -95,6 +95,8 @@ export function Shell({ children }: { children: ReactNode }) {
   const renderItem = (item: { href: string; icon: typeof Users; key: Parameters<typeof t>[0]; match: (p: string) => boolean }) => {
     const Icon = item.icon;
     const active = item.match(pathname);
+    /* offene Tagesquote = Kapazität minus erledigte (Badge folgt dem Fortschritt) */
+    const remaining = app.settings.kapazitaet - Object.keys(app.done).length;
     return (
       <Link
         key={item.href}
@@ -109,9 +111,9 @@ export function Shell({ children }: { children: ReactNode }) {
       >
         <Icon size={17} strokeWidth={active ? 2.2 : 1.9} className={clsx(active ? "text-white" : "text-slate-400")} />
         <span className="truncate">{t(item.key)}</span>
-        {item.href === "/tagesliste" && !active && app.tagesliste.length > 0 && (
+        {item.href === "/tagesliste" && !active && remaining > 0 && (
           <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold grid place-items-center tnum">
-            {app.tagesliste.length}
+            {remaining}
           </span>
         )}
       </Link>

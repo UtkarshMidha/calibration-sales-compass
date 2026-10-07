@@ -81,11 +81,6 @@ export default function AngebotPage() {
       ),
     });
 
-  const print = () => {
-    if (!draft.exportiert) patch({ exportiert: true });
-    setTimeout(() => window.print(), 60);
-  };
-
   const downloadPdf = () => {
     const blob = buildQuotePdf({
       draft,
@@ -396,7 +391,7 @@ export default function AngebotPage() {
               {draft.exportiert && <Chip tone="ok">{lang === "de" ? "Exportiert" : "Exported"}</Chip>}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mt-3">
+            <div className="grid grid-cols-1 gap-2 mt-3">
               <Btn variant="primary" onClick={downloadPdf}>
                 <Download size={14} /> {t("angebot.pdf")}
               </Btn>
@@ -538,11 +533,11 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-2 cursor-pointer group">
-      <span className="flex items-center gap-2 text-[12.5px] text-ink">
+    <label className="flex items-start justify-between gap-3 cursor-pointer group py-0.5">
+      <span className="flex items-start gap-2 text-[12.5px] text-ink min-w-0">
         <span
           className={clsx(
-            "w-4 h-4 rounded-[4px] border grid place-items-center transition-colors",
+            "mt-[1px] w-4 h-4 rounded-[5px] border grid place-items-center transition-colors shrink-0 group-hover:border-brand-700",
             checked ? "bg-brand-700 border-brand-700 text-white" : "border-line-strong bg-surface-0",
           )}
         >
@@ -554,9 +549,9 @@ function ToggleRow({
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
         />
-        {label}
+        <span className="leading-snug">{label}</span>
       </span>
-      <span className="tnum text-[11.5px] text-ink-3">{value}</span>
+      <span className="tnum text-[11.5px] text-ink-3 whitespace-nowrap shrink-0 text-right">{value}</span>
     </label>
   );
 }
