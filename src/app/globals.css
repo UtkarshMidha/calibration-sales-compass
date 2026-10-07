@@ -2,11 +2,11 @@
 
 /* ------------------------------------------------------------------ *
  *  PeCal Kompass — design tokens
- *  Metrology aesthetic: precise lines, tabular numbers, calm surfaces,
- *  navy shell + Perschmann orange used surgically.
+ *  Modern SaaS look: soft surfaces, 16px radii, lifted cards,
+ *  Perschmann orange used sparingly, Inter/Roboto Flex type.
  * ------------------------------------------------------------------ */
 @theme {
-  --font-sans: "Roboto Flex", "Roboto", "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", "Roboto Flex", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Roboto Mono", ui-monospace, "SFMono-Regular", monospace;
 
   /* navy shell */
@@ -50,8 +50,9 @@
   --color-critical: #c92a2a;
   --color-violet: #7048e8;
 
-  --shadow-lift: 0 1px 2px rgb(16 41 58 / 0.06), 0 6px 16px -6px rgb(16 41 58 / 0.14);
+  --shadow-lift: 0 1px 2px rgb(16 41 58 / 0.05), 0 8px 24px -12px rgb(16 41 58 / 0.16);
   --shadow-pop: 0 2px 6px rgb(16 41 58 / 0.08), 0 18px 44px -12px rgb(16 41 58 / 0.28);
+  --shadow-card: 0 1px 2px rgb(16 41 58 / 0.04), 0 12px 32px -16px rgb(16 41 58 / 0.18);
 }
 
 :root {
@@ -68,7 +69,10 @@ body {
 }
 
 body {
-  background: var(--color-surface-1);
+  background: #f1f4f8;
+  background-image:
+    radial-gradient(1200px 400px at 12% -8%, rgb(59 158 227 / 0.10), transparent 60%),
+    radial-gradient(1000px 380px at 88% -10%, rgb(255 112 0 / 0.08), transparent 60%);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -101,8 +105,55 @@ body {
 
 .card {
   background: var(--color-surface-0);
-  border: 1px solid var(--color-line);
-  border-radius: 12px;
+  border: 1px solid rgb(220 227 234 / 0.9);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+/* Modern dashboard hero — deep navy with orange glow, mountain silhouette via CSS */
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background:
+    radial-gradient(600px 220px at 85% 10%, rgb(255 112 0 / 0.28), transparent 60%),
+    radial-gradient(700px 300px at 10% 110%, rgb(59 158 227 / 0.22), transparent 60%),
+    linear-gradient(112deg, #0b1e2c 0%, #14334a 55%, #1d4a68 100%);
+  color: #fff;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -38% -10%;
+  height: 78%;
+  pointer-events: none;
+  background:
+    linear-gradient(transparent 40%, rgb(255 255 255 / 0.10) 100%),
+    radial-gradient(closest-side at 22% 100%, rgb(255 255 255 / 0.20), transparent 70%),
+    radial-gradient(closest-side at 55% 100%, rgb(255 255 255 / 0.14), transparent 70%),
+    radial-gradient(closest-side at 80% 100%, rgb(255 255 255 / 0.18), transparent 70%);
+  clip-path: polygon(0 62%, 12% 38%, 24% 58%, 36% 30%, 48% 55%, 60% 34%, 72% 58%, 84% 40%, 100% 60%, 100% 100%, 0 100%);
+  opacity: 0.9;
+}
+.hero-soft {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: linear-gradient(112deg, #eef4fb 0%, #e6eefb 45%, #fdf1e7 100%);
+  border: 1px solid rgb(220 227 234 / 0.9);
+}
+
+.kpi {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.kpi:hover {
+  transform: translateY(-1px);
+}
+
+.navitem {
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .kbd {

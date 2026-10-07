@@ -1,920 +1,443 @@
 "use client";
 
-import clsx from "clsx";
-import {
-  ArrowRight,
-  Calendar,
-  Check,
-  Copy,
-  Download,
-  Mail,
-  MapPin,
-  Phone,
-  Sparkles,
-  Target,
-  Timer,
-  UserCheck,
-} from "lucide-react";
+import { ArrowRight, CalendarClock, Copy, FileText, Mail, ShieldAlert, Sparkles, Sun, TrendingUp, TriangleAlert, Wrench } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { buildEmail, buildEml, buildLeitfaden } from "@/lib/content";
-import {
-  BRANCHEN,
-  GEBIETE,
-  USERS,
-  getKandidatenZahl,
-  getKunde,
-  getMessmittel,
-  getZeitstrahl,
-  type Anlass,
-  type Empfehlung,
-  type ErgebnisCode,
-  type Prioritaet,
-} from "@/lib/data";
-import { addDays, date, euro } from "@/lib/format";
-import { REASON_FACTOR_LABELS, reasonText, useI18n } from "@/lib/i18n";
-import { useApp, useErfolgschance } from "@/lib/store";
-import { Btn, Chip, DemoBadge, EmptyState, FactorBars, Kbd, Modal, PrioritaetsBadge, Progress, StatusPill, Zeitstrahl } from "@/components/ui";
+import { useMemo } from "react";
+import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { HEADLINE, getCockpitAggregates, getKunde, getPrognoseGesamt } from "@/lib/data";
+import { euro, num } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { useDashboard, type RealTopKunde } from "@/lib/real-data";
+import { useApp } from "@/lib/store";
 
-const ANLASS_ORDER: Anlass[] = ["ueberfaellig", "faellig_bald", "abwanderung", "branche", "portal"];
-const ANREDE_NAME: Record<string, string> = {
-  sabine: "Frau Schneider",
-  murat: "Herr Yılmaz",
-  julia: "Frau Wagner",
-  thomas: "Herr Brandt",
-};
+const DONUT_COLORS = ["#ef4444", "#3b9ee3", "#10b981", "#8b5cf6", "#94a3b8"];
 
-interface Filters {
-  anlass: Anlass | "alle";
-  prioritaet: Prioritaet | "alle";
-  branche: string;
-  gebiet: string;
-  nurMeine: boolean;
-  nichtUebernommen: boolean;
-}
-
-const EMPTY_FILTERS: Filters = {
-  anlass: "alle",
-  prioritaet: "alle",
-  branche: "alle",
-  gebiet: "alle",
-  nurMeine: false,
-  nichtUebernommen: false,
-};
-
-export default function HeutePage() {
+export default function DashboardPage() {
   const app = useApp();
   const { t, lang } = useI18n();
   const router = useRouter();
   const loc = lang === "de" ? "de-DE" : "en-GB";
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [leaving, setLeaving] = useState<string | null>(null);
-  const [ergebnisOpen, setErgebnisOpen] = useState(false);
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [spaeterOpen, setSpaeterOpen] = useState(false);
-  const [warum, setWarum] = useState(false);
+  const isLeitung = app.user.role === "leitung";
 
   const list = app.tagesliste;
-  const success = useErfolgschance();
+  const evSum = useMemo(() => list.reduce((s, i) => s + i.ev, 0), [list]);
+  const agg = useMemo(() => getCockpitAggregates(), []);
+  const forecast = useMemo(() => getPrognoseGesamt(app.stichtag).filter((d) => !d.historie).slice(0, 6), [app.stichtag]);
 
-  const filtered = useMemo(
-    () =>
-      list.filter((item) => {
-        const k = getKunde(item.kundeId);
-        if (!k) return false;
-        if (filters.anlass !== "alle" && item.empfehlung.anlass !== filters.anlass) return false;
-        if (filters.prioritaet !== "alle" && item.prioritaet !== filters.prioritaet) return false;
-        if (filters.branche !== "alle" && k.branche !== filters.branche) return false;
-        if (filters.gebiet !== "alle" && k.gebiet !== filters.gebiet) return false;
-        if (filters.nurMeine && app.claims[item.kundeId] !== app.user.id) return false;
-        if (filters.nichtUebernommen && app.claims[item.kundeId]) return false;
-        return true;
-      }),
-    [list, filters, app.claims, app.user.id],
-  );
+  /* real snapshot data (database_tables/*.csv via npm run data:build) */
+  const { data: real } = useDashboard();
+  const rk = real?.kpis;
+  const realTop: RealTopKunde[] = useMemo(() => real?.topKunden.slice(0, 8) ?? [], [real]);
 
-  const selectedId = app.selectedKunde ?? filtered[0]?.kundeId ?? null;
-  const selectedItem = list.find((i) => i.kundeId === selectedId) ?? filtered[0] ?? null;
-  const kunde = selectedItem ? getKunde(selectedItem.kundeId) : undefined;
+  const normSpark = (arr: number[] | undefined, fallback: number[]): number[] => {
+    const a = arr && arr.length >= 4 ? arr : fallback;
+    if (a.length === 8) return a;
+    if (a.length > 8) return a.slice(a.length - 8);
+    if (a.length === 0) return fallback.slice(0, 8);
+    const out = [...a];
+    while (out.length < 8) out.unshift(out[0]);
+    return out;
+  };
 
-  useEffect(() => {
-    if (!app.selectedKunde && filtered[0]) app.setSelectedKunde(filtered[0].kundeId);
-  }, [filtered, app]);
+  const top8 = list.slice(0, 8);
 
-  /* ---- keyboard triage ---- */
-  const move = useCallback(
-    (delta: number) => {
-      if (filtered.length === 0) return;
-      const idx = filtered.findIndex((i) => i.kundeId === selectedId);
-      const next = filtered[Math.min(filtered.length - 1, Math.max(0, (idx === -1 ? 0 : idx) + delta))];
-      if (next) app.setSelectedKunde(next.kundeId);
-    },
-    [filtered, selectedId, app],
-  );
+  const donut = useMemo(() => {
+    if (real) {
+      return real.anlassMix.map((m) => ({
+        anlass: t(`anlass.${m.anlass}` as "anlass.ueberfaellig"),
+        wert: m.wert,
+        pct: m.pct,
+      }));
+    }
+    const m = new Map<string, number>();
+    for (const i of list) m.set(i.empfehlung.anlass, (m.get(i.empfehlung.anlass) ?? 0) + i.ev);
+    const total = [...m.values()].reduce((a, b) => a + b, 0) || 1;
+    return [...m.entries()].map(([anlass, wert]) => ({
+      anlass: t(`anlass.${anlass}` as "anlass.ueberfaellig"),
+      wert,
+      pct: Math.round((wert / total) * 100),
+    }));
+  }, [list, t, real]);
 
-  const finish = useCallback(
-    (code: ErgebnisCode, opts?: { note?: string; wettbewerber?: string; wiedervorlage?: string }) => {
-      if (!selectedItem) return;
-      const id = selectedItem.kundeId;
-      setLeaving(id);
-      window.setTimeout(() => {
-        app.erledigt(id, code, opts);
-        setLeaving(null);
-        app.toast(t("toast.erledigt"), { actionLabel: t("toast.rueckgaengig"), action: () => app.undo(id) });
-        const rest = filtered.filter((i) => i.kundeId !== id);
-        app.setSelectedKunde(rest[0]?.kundeId ?? null);
-      }, 260);
-    },
-    [selectedItem, app, t, filtered],
-  );
+  const due6 = useMemo(() => {
+    if (real) return real.dueNext6.map((d) => ({ monat: d.monat.slice(5), anzahl: d.anzahl }));
+    return forecast.map((f) => ({ monat: f.monat.slice(5), anzahl: f.kalibrierungen }));
+  }, [real, forecast]);
 
-  const claimIt = useCallback(() => {
-    if (!selectedItem) return;
-    if (app.claims[selectedItem.kundeId]) return;
-    app.claim(selectedItem.kundeId);
-    app.toast(t("toast.uebernommen"));
-  }, [selectedItem, app, t]);
+  const topBranchen = useMemo(() => {
+    if (real) return real.topBranchen.slice(0, 5).map((r) => ({ name: r.name, wert: r.wert, pct: r.pct }));
+    const total = agg.byBranche.reduce((s, r) => s + r.wert, 0) || 1;
+    return agg.byBranche.slice(0, 5).map((r) => ({ name: r.key, wert: r.wert, pct: Math.round((r.wert / total) * 100) }));
+  }, [agg, real]);
 
-  const openEmail = useCallback(() => {
-    if (selectedItem) setEmailOpen(true);
-  }, [selectedItem]);
+  const firstName = t(app.user.nameKey).split(" ")[0];
+  const greeting = lang === "de" ? "Guten Morgen" : "Good morning";
 
-  const openQuote = useCallback(() => {
-    if (!selectedItem) return;
-    const id = app.createDraft(selectedItem.kundeId);
-    app.toast(t("toast.angebotErstellt"));
+  /* sales KPIs come from the real CSV snapshots; Leitung keeps the model cockpit */
+  const salesKpis = [
+    { label: lang === "de" ? "Überfällige Messmittel" : "Overdue instruments", value: num(rk?.ueberfaellig ?? HEADLINE.ueberfaellig, 0, loc), sub: lang === "de" ? `bei ${num(rk?.ueberfaelligKunden ?? HEADLINE.ueberfaelligKunden, 0, loc)} Kunden` : `at ${num(rk?.ueberfaelligKunden ?? HEADLINE.ueberfaelligKunden, 0, loc)} customers`, icon: Wrench, bg: "bg-red-50", fg: "text-red-500", spark: normSpark(real?.sparks.ueberfaellig, [4, 5, 4, 6, 5, 7, 6, 8]) },
+    { label: lang === "de" ? "Erwarteter Umsatz (heute)" : "Expected revenue (today)", value: euro(rk?.umsatzHeute ?? evSum, loc), sub: lang === "de" ? `aus ${rk?.empfehlungen ?? list.length} Empfehlungen` : `from ${rk?.empfehlungen ?? list.length} recommendations`, icon: TrendingUp, bg: "bg-blue-50", fg: "text-blue-600", spark: normSpark(real?.sparks.umsatz, [3, 4, 5, 4, 6, 7, 6, 9]) },
+    { label: lang === "de" ? "Fällige Messmittel (30 Tage)" : "Due instruments (30 days)", value: num(rk?.due30 ?? 18432, 0, loc), sub: lang === "de" ? `bei ${num(rk?.due30Kunden ?? 1156, 0, loc)} Kunden` : `at ${num(rk?.due30Kunden ?? 1156, 0, loc)} customers`, icon: CalendarClock, bg: "bg-emerald-50", fg: "text-emerald-600", spark: normSpark(real?.sparks.faellig, [6, 5, 7, 6, 8, 7, 9, 8]) },
+    { label: lang === "de" ? "Churn-Risiko (hoch)" : "Churn risk (high)", value: num(rk?.churnHoch ?? 327, 0, loc), sub: lang === "de" ? "Kunden mit erhöhtem Risiko" : "customers at elevated risk", icon: ShieldAlert, bg: "bg-violet-50", fg: "text-violet-600", spark: normSpark(real?.sparks.churn, [5, 6, 5, 4, 6, 5, 7, 6]) },
+  ];
+
+  const kpis = isLeitung
+    ? [
+        { label: t("cockpit.kpi.umsatz12m"), value: euro(agg.umsatz12m, loc), sub: lang === "de" ? "nächste 12 Monate" : "next 12 months", icon: TrendingUp, bg: "bg-blue-50", fg: "text-blue-600", spark: [3, 5, 4, 7, 6, 9, 8, 11] },
+        { label: t("cockpit.kpi.atRisk"), value: euro(agg.atRisk, loc), sub: lang === "de" ? "Abwanderungsrisiko × Umsatz" : "churn risk × revenue", icon: ShieldAlert, bg: "bg-violet-50", fg: "text-violet-600", spark: [8, 7, 9, 6, 7, 5, 6, 4] },
+        { label: t("cockpit.kpi.ueberfaellig"), value: num(rk?.ueberfaellig ?? HEADLINE.ueberfaellig, 0, loc), sub: lang === "de" ? `bei ${num(rk?.ueberfaelligKunden ?? HEADLINE.ueberfaelligKunden, 0, loc)} Kunden` : `at ${num(rk?.ueberfaelligKunden ?? HEADLINE.ueberfaelligKunden, 0, loc)} customers`, icon: TriangleAlert, bg: "bg-red-50", fg: "text-red-500", spark: normSpark(real?.sparks.ueberfaellig, [4, 5, 6, 5, 7, 8, 7, 9]) },
+        { label: t("cockpit.kpi.faellig3m"), value: num(agg.faellig3Monate, 0, loc), sub: lang === "de" ? "erwarteter Eingang · 3 Monate" : "expected intake · 3 months", icon: CalendarClock, bg: "bg-emerald-50", fg: "text-emerald-600", spark: [5, 6, 5, 7, 8, 7, 9, 10] },
+      ]
+    : salesKpis;
+
+  const openQuote = (kundeId: string) => {
+    const id = app.createDraft(kundeId);
     router.push(`/angebote/${id}`);
-  }, [selectedItem, app, t, router]);
+  };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable || el.tagName === "SELECT")) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const key = e.key.toLowerCase();
-      if (key === "j") { e.preventDefault(); move(1); }
-      else if (key === "k") { e.preventDefault(); move(-1); }
-      else if (key === "ü") { e.preventDefault(); claimIt(); }
-      else if (key === "e") { e.preventDefault(); openEmail(); }
-      else if (key === "a") { e.preventDefault(); openQuote(); }
-      else if (key === "d") { e.preventDefault(); if (selectedItem) setErgebnisOpen(true); }
-      else if (key === "s") { e.preventDefault(); if (selectedItem) setSpaeterOpen(true); }
-      else if (key === "enter" && selectedItem) {
-        e.preventDefault();
-        router.push(`/kunden/${selectedItem.kundeId}`);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [move, claimIt, openEmail, openQuote, selectedItem, router]);
-
-  const high = list.filter((i) => i.prioritaet === "hoch").length;
-  const doneCount = Object.keys(app.done).length;
-  const top = list[0];
-  const topKunde = top ? getKunde(top.kundeId) : undefined;
-  const activeFilters = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
+  const copyRealMail = (r: RealTopKunde) => {
+    const text =
+      lang === "de"
+        ? `Sehr geehrte Damen und Herren,\n\nbei der Durchsicht Ihrer Messmittel ist uns aufgefallen, dass für ${r.ueberfaellig} Messmittel (Kunde ${r.kunde}, ${r.branche}) die Kalibrierung im Median seit ${r.tageMedian} Tagen überfällig ist.\n\nDamit Ihre Prüfmittelüberwachung auditsicher bleibt, holen wir die Messmittel gerne bei Ihnen ab. Ein Angebotsentwurf über ca. ${euro(r.ev, loc, false)} liegt bei.\n\nDarf ich die Abholung für die kommende Woche einplanen?\n\nMit freundlichen Grüßen\n${t(app.user.nameKey)}`
+        : `Dear Sir or Madam,\n\nwe noticed that ${r.ueberfaellig} of your instruments (customer ${r.kunde}, ${r.branche}) are overdue by a median of ${r.tageMedian} days.\n\nTo keep your equipment audit-proof we can collect the instruments. A draft quote of about ${euro(r.ev, loc, false)} is attached.\n\nMay I schedule the pickup for next week?\n\nKind regards\n${t(app.user.nameKey)}`;
+    navigator.clipboard?.writeText(text).then(() => app.toast(lang === "de" ? "E-Mail-Text kopiert." : "Email text copied."));
+  };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* ---------------- briefing ---------------- */}
-      <div className="px-5 pt-4 pb-3 shrink-0">
-        <div className="relative overflow-hidden rounded-[14px] bg-gradient-to-r from-navy-900 via-navy-800 to-navy-850 text-white px-5 py-3.5 grain anim-fade-up">
-          <div className="relative flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-[8px] bg-brand grid place-items-center shrink-0">
-                <Sparkles size={15} />
-              </span>
-              <p className="text-[13.5px] leading-snug">
-                <strong className="font-bold">
-                  {lang === "de"
-                    ? `Guten Morgen, ${ANREDE_NAME[app.user.id] ?? app.user.kurz}.`
-                    : `Good morning, ${t(app.user.nameKey).split(" ")[0]}.`}
-                </strong>{" "}
-                {lang === "de"
-                  ? `${list.length} Empfehlungen für heute, davon ${high} mit hoher Priorität.`
-                  : `${list.length} recommendations for today, ${high} of them high priority.`}
-                {topKunde && (
-                  <>
-                    {" "}
-                    {lang === "de" ? "Größter Hebel:" : "Biggest lever:"}{" "}
-                    <strong className="font-bold text-brand">
-                      {topKunde.name} ({top!.empfehlung.betroffeneAnzahl} {lang === "de" ? "überfällige Messmittel" : "overdue instruments"})
-                    </strong>
-                    .
-                  </>
-                )}
+    <div className="h-full overflow-y-auto">
+      <div className="px-5 py-4 max-w-[1400px] mx-auto space-y-4">
+        {/* ---------------- hero ---------------- */}
+        <div className="hero px-6 py-5 flex items-center gap-6 flex-wrap anim-fade-up">
+          <div className="relative z-10 min-w-0 flex-1">
+            <p className="text-white/70 text-[13px] font-medium">{greeting}, {firstName} —</p>
+            <h1 className="text-white text-[22px] md:text-[26px] font-extrabold tracking-tight leading-tight">
+              {lang === "de" ? "Hier sind Ihre heutigen Empfehlungen" : "Here are today's recommendations"}
+            </h1>
+            <p className="text-white/75 text-[13px] mt-1 tnum">
+              {rk?.empfehlungen ?? list.length} {lang === "de" ? "priorisierte Kunden" : "prioritized customers"} · {lang === "de" ? "Erwarteter Umsatz" : "Expected revenue"}: {euro(rk?.umsatzHeute ?? evSum, loc)}
+              {real && <span className="text-white/60"> · {lang === "de" ? "echte Snapshots" : "real snapshots"}</span>}
+            </p>
+          </div>
+          <div className="relative z-10 hidden md:flex items-center gap-3 bg-white/95 rounded-2xl px-4 py-3 shadow-lg shrink-0">
+            <span className="w-10 h-10 rounded-xl bg-amber-100 grid place-items-center">
+              <Sun size={20} className="text-amber-500" />
+            </span>
+            <span>
+              <span className="block text-[13.5px] font-bold text-slate-900">Dienstag, 7. Oktober 2026</span>
+              <span className="block text-[12px] text-slate-500">{lang === "de" ? "Zeit, Chancen zu nutzen!" : "Time to seize opportunities!"}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* ---------------- KPIs ---------------- */}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 stagger">
+          {kpis.map((k) => {
+            const Icon = k.icon;
+            return (
+              <div key={k.label} className="card kpi p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <span className={`w-10 h-10 rounded-xl ${k.bg} grid place-items-center shrink-0`}>
+                    <Icon size={18} className={k.fg} />
+                  </span>
+                  <MiniSpark points={k.spark} color={k.fg.includes("red") ? "#ef4444" : k.fg.includes("blue") ? "#3b9ee3" : k.fg.includes("emerald") ? "#10b981" : "#8b5cf6"} />
+                </div>
+                <p className="text-[11.5px] font-semibold text-slate-500 mt-3 leading-tight">{k.label}</p>
+                <p className="tnum text-[24px] font-extrabold text-slate-900 leading-tight tracking-tight">{k.value}</p>
+                <p className="text-[11.5px] text-slate-400 tnum">{k.sub}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ---------------- main grid ---------------- */}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px] items-start">
+          {/* left */}
+          <div className="space-y-4 min-w-0">
+            <section className="card overflow-hidden anim-fade-up">
+              <header className="flex items-center gap-3 px-5 pt-4 pb-3 flex-wrap">
+                <div>
+                  <h2 className="text-[15px] font-bold text-slate-900 flex items-center gap-2">
+                    <Sparkles size={16} className="text-[#2563eb]" /> {t("dash.topEmpfehlungen")}
+                  </h2>
+                  <p className="text-[12.5px] text-slate-500">
+                    {lang === "de" ? "Diese Kunden sollten Sie heute kontaktieren – basierend auf Daten und KI-Analyse." : "Contact these customers today – based on data and AI analysis."}
+                  </p>
+                </div>
+                <div className="flex-1" />
+                <Link href="/tagesliste" className="inline-flex items-center gap-1 text-[12.5px] font-bold text-[#2563eb] hover:underline">
+                  {t("dash.alleAnsehen")} <ArrowRight size={13} />
+                </Link>
+              </header>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px] min-w-[720px]">
+                  <thead>
+                    <tr className="border-y border-slate-100 bg-slate-50/70 text-[10.5px] uppercase tracking-wider text-slate-400">
+                      <th className="text-left font-bold px-4 py-2 w-10">#</th>
+                      <th className="text-left font-bold px-2 py-2">{lang === "de" ? "Kunde" : "Customer"}</th>
+                      <th className="text-left font-bold px-2 py-2">{lang === "de" ? "Anlass" : "Reason"}</th>
+                      <th className="text-right font-bold px-2 py-2">{lang === "de" ? "Erwarteter Wert" : "Expected value"}</th>
+                      <th className="text-left font-bold px-2 py-2">{lang === "de" ? "Dringlichkeit" : "Urgency"}</th>
+                      <th className="text-right font-bold px-4 py-2">{lang === "de" ? "Aktionen" : "Actions"}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {realTop.length > 0
+                      ? realTop.map((r, idx) => (
+                          <tr key={r.kunde} className="hover:bg-blue-50/40 transition-colors group">
+                            <td className="px-4 py-2.5">
+                              <span className={`w-6 h-6 rounded-full grid place-items-center text-[12px] font-bold tnum ${idx < 3 ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500"}`}>{idx + 1}</span>
+                            </td>
+                            <td className="px-2 py-2.5">
+                              <Link href={`/kunden/${r.kunde}`} className="font-bold text-slate-900 hover:text-[#2563eb] leading-tight block tnum">Kunde {r.kunde}</Link>
+                              <span className="text-[11.5px] text-slate-400">{r.branche}</span>
+                            </td>
+                            <td className="px-2 py-2.5">
+                              <AnlassChip anlass="ueberfaellig" n={r.ueberfaellig} />
+                            </td>
+                            <td className="px-2 py-2.5 text-right tnum font-bold text-slate-900 whitespace-nowrap">{euro(r.ev, loc)}</td>
+                            <td className="px-2 py-2.5">
+                              <Dringlichkeit p={r.tageMedian >= 80 ? "hoch" : r.tageMedian >= 40 ? "mittel" : "niedrig"} lang={lang} />
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <div className="flex items-center justify-end gap-1">
+                                <IconBtn title={lang === "de" ? "E-Mail-Text kopieren" : "Copy email text"} onClick={() => copyRealMail(r)}><Copy size={14} /></IconBtn>
+                                <IconBtn title={lang === "de" ? "Kunde öffnen" : "Open customer"} onClick={() => router.push(`/kunden/${r.kunde}`)} accent><ArrowRight size={14} /></IconBtn>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      : top8.map((item, idx) => {
+                      const k = getKunde(item.kundeId)!;
+                      return (
+                        <tr key={item.kundeId} className="hover:bg-blue-50/40 transition-colors group">
+                          <td className="px-4 py-2.5">
+                            <span className={`w-6 h-6 rounded-full grid place-items-center text-[12px] font-bold tnum ${idx < 3 ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500"}`}>{idx + 1}</span>
+                          </td>
+                          <td className="px-2 py-2.5">
+                            <Link href={`/kunden/${k.id}`} className="font-bold text-slate-900 hover:text-[#2563eb] leading-tight block">{k.name}</Link>
+                            <span className="text-[11.5px] text-slate-400">{k.branche}</span>
+                          </td>
+                          <td className="px-2 py-2.5">
+                            <AnlassChip anlass={item.empfehlung.anlass} n={item.empfehlung.betroffeneAnzahl} />
+                          </td>
+                          <td className="px-2 py-2.5 text-right tnum font-bold text-slate-900 whitespace-nowrap">{euro(item.ev, loc)}</td>
+                          <td className="px-2 py-2.5">
+                            <Dringlichkeit p={item.prioritaet} lang={lang} />
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center justify-end gap-1">
+                              <IconBtn title="E-Mail" onClick={() => router.push(`/kunden/${k.id}`)}><Mail size={14} /></IconBtn>
+                              <IconBtn title="Angebot" onClick={() => openQuote(k.id)} accent><FileText size={14} /></IconBtn>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-5 py-2.5 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                <span className="text-[12px] text-slate-400 tnum">
+                  {real
+                    ? (lang === "de" ? `Top 8 nach erwartetem Wert · echte Snapshots vom ${real.stichtag}` : `Top 8 by expected value · real snapshots of ${real.stichtag}`)
+                    : (lang === "de" ? `1–8 von ${list.length} Empfehlungen` : `1–8 of ${list.length} recommendations`)}
+                </span>
+                <Link href="/tagesliste" className="text-[12.5px] font-bold text-[#2563eb] hover:underline inline-flex items-center gap-1">
+                  {lang === "de" ? "Tagesliste öffnen" : "Open daily list"} <ArrowRight size={13} />
+                </Link>
+              </div>
+            </section>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <section className="card p-4 anim-fade-up">
+                <h3 className="text-[13px] font-bold text-slate-900">{t("dash.potenzialNachAnlass")}</h3>
+                <div className="h-[190px] mt-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={donut} dataKey="wert" nameKey="anlass" innerRadius={52} outerRadius={78} paddingAngle={2} strokeWidth={0}>
+                        {donut.map((_, i) => (
+                          <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v) => euro(Number(v ?? 0), loc)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <ul className="mt-1 space-y-1">
+                  {donut.map((d, i) => (
+                    <li key={d.anlass} className="flex items-center gap-2 text-[12px]">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                      <span className="text-slate-600 truncate flex-1">{d.anlass}</span>
+                      <span className="tnum font-bold text-slate-800">{d.pct} %</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+              <section className="card p-4 anim-fade-up">
+                <h3 className="text-[13px] font-bold text-slate-900">{t("dash.faellig6m")}</h3>
+                <div className="h-[190px] mt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={due6.map((f) => ({ monat: f.monat, anzahl: f.anzahl }))}>
+                      <XAxis dataKey="monat" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} />
+                      <Tooltip formatter={(v) => `${num(Number(v ?? 0), 0, loc)} ${lang === "de" ? "Messmittel" : "instruments"}`} labelFormatter={(l) => `${l}`} />
+                      <Bar dataKey="anzahl" fill="#3b9ee3" radius={[7, 7, 4, 4]} maxBarSize={34} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-[11.5px] text-slate-400 mt-1 tnum">
+                  {real
+                    ? (lang === "de" ? "Echte Fälligkeiten aus MESSMITTEL.csv (Stichtag 25.09.2026)." : "Real due dates from MESSMITTEL.csv (reference date 25/09/2026).")
+                    : (lang === "de" ? "Erwarteter Eingang aus Fälligkeiten + Rücklaufverhalten (M2)." : "Expected intake from due dates + return behaviour (M2).")}
+                </p>
+              </section>
+            </div>
+          </div>
+
+          {/* right */}
+          <div className="space-y-4">
+            <section className="card p-4 anim-fade-up">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles size={15} className="text-[#7c3aed]" />
+                <h3 className="text-[13.5px] font-bold text-slate-900">KI-Assistent</h3>
+                <span className="ml-auto inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 h-5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Online
+                </span>
+              </div>
+              <p className="text-[12.5px] text-slate-500 leading-relaxed">
+                {lang === "de" ? "Ich helfe Ihnen bei allen Fragen zu Kunden, Messmitteln und Verkaufschancen." : "I help with all questions on customers, instruments and sales opportunities."}
               </p>
-            </div>
-            <div className="flex-1" />
-            <div className="hidden md:flex items-center gap-5 text-[11.5px] text-white/70">
-              <span className="tnum">
-                {lang === "de" ? "Vorschlagsliste" : "Candidates"}:{" "}
-                <strong className="text-white">{numDE(getKandidatenZahl(app.stichtag))}</strong>
-              </span>
-              <span className="tnum">
-                {lang === "de" ? "Überfällig gesamt" : "Overdue total"}:{" "}
-                <strong className="text-white">{numDE(64915)}</strong>
-              </span>
-            </div>
+              <button onClick={() => app.setAssistantOpen(true)} className="mt-3 w-full h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-[#2563eb] transition-colors text-left px-3 text-[13px] text-slate-400">
+                {lang === "de" ? "Fragen Sie mich etwas…" : "Ask me anything…"}
+              </button>
+              <div className="mt-2.5 space-y-1.5">
+                {[
+                  lang === "de" ? "Welche Kunden haben das höchste Potenzial?" : "Which customers have the highest potential?",
+                  lang === "de" ? "Zeige mir Kunden mit überfälligen Messmitteln" : "Show customers with overdue instruments",
+                  lang === "de" ? "Erstelle einen E-Mail-Entwurf für BMW" : "Draft an email for BMW",
+                ].map((s) => (
+                  <button key={s} onClick={() => app.setAssistantOpen(true)} className="w-full text-left text-[12.5px] px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 hover:border-[#2563eb] hover:bg-blue-50/50 transition-colors text-slate-600 truncate">
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="card p-4 anim-fade-up">
+              <h3 className="text-[13px] font-bold text-slate-900 mb-2.5">⚡ {t("dash.schnellaktionen")}</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <QuickAction icon={<FileText size={16} className="text-[#2563eb]" />} bg="bg-blue-50" title={lang === "de" ? "Angebot erstellen" : "Create quote"} sub={lang === "de" ? "PDF aus fälligen" : "PDF from due"} onClick={() => top8[0] && openQuote(top8[0].kundeId)} />
+                <QuickAction icon={<Mail size={16} className="text-violet-600" />} bg="bg-violet-50" title="E-Mail-Entwurf" sub={lang === "de" ? "Formelle E-Mail" : "Formal email"} onClick={() => top8[0] && router.push(`/kunden/${top8[0].kundeId}`)} />
+                <QuickAction icon={<ShieldAlert size={16} className="text-emerald-600" />} bg="bg-emerald-50" title={lang === "de" ? "Kundenanalyse" : "Customer analysis"} sub={lang === "de" ? "Detaillierte Ansicht" : "Detailed view"} onClick={() => router.push("/kunden")} />
+                <QuickAction icon={<TrendingUp size={16} className="text-amber-600" />} bg="bg-amber-50" title={lang === "de" ? "Bericht exportieren" : "Export report"} sub="Excel oder PDF" onClick={() => router.push(isLeitung ? "/cockpit" : "/kunden")} />
+              </div>
+            </section>
+
+            <section className="card p-4 anim-fade-up">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[13px] font-bold text-slate-900">{isLeitung ? t("dash.risikoBranche") : t("dash.topBranchen")}</h3>
+                <Link href={isLeitung ? "/cockpit" : "/kunden"} className="text-[12px] font-bold text-[#2563eb] hover:underline">{t("dash.alleAnsehen")} →</Link>
+              </div>
+              <div className="space-y-2.5">
+                {topBranchen.map((b, i) => (
+                  <div key={b.name}>
+                    <div className="flex items-baseline justify-between gap-2 mb-1">
+                      <span className="text-[12.5px] text-slate-600 truncate">{b.name}</span>
+                      <span className="tnum text-[12px] font-bold text-slate-800">{b.pct} %</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${Math.max(6, (b.wert / Math.max(...topBranchen.map((x) => x.wert))) * 100)}%`, background: ["#2563eb", "#7c3aed", "#10b981", "#f59e0b", "#94a3b8"][i % 5] }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {isLeitung && (
+                <Link href="/cockpit" className="mt-3 w-full h-10 rounded-xl bg-slate-900 text-white text-[13px] font-semibold grid place-items-center hover:bg-slate-700 transition-colors">
+                  {t("dash.zumCockpit")} →
+                </Link>
+              )}
+            </section>
           </div>
         </div>
       </div>
-
-      {/* ---------------- toolbar ---------------- */}
-      <div className="px-5 pb-3 flex items-center gap-2 flex-wrap shrink-0">
-        <Select
-          value={filters.anlass}
-          onChange={(v) => setFilters((f) => ({ ...f, anlass: v as Filters["anlass"] }))}
-          label={t("heute.anlass")}
-          options={[{ value: "alle", label: t("heute.alle") }, ...ANLASS_ORDER.map((a) => ({ value: a, label: t(`anlass.${a}` as "anlass.ueberfaellig") }))]}
-        />
-        <Select
-          value={filters.prioritaet}
-          onChange={(v) => setFilters((f) => ({ ...f, prioritaet: v as Filters["prioritaet"] }))}
-          label={t("heute.prioritaet")}
-          options={[
-            { value: "alle", label: t("heute.alle") },
-            { value: "hoch", label: t("prioritaet.hoch") },
-            { value: "mittel", label: t("prioritaet.mittel") },
-            { value: "niedrig", label: t("prioritaet.niedrig") },
-          ]}
-        />
-        <Select
-          value={filters.branche}
-          onChange={(v) => setFilters((f) => ({ ...f, branche: v }))}
-          label={t("heute.branche")}
-          options={[{ value: "alle", label: t("heute.alle") }, ...BRANCHEN.map((b) => ({ value: b.name, label: b.name }))]}
-        />
-        <Select
-          value={filters.gebiet}
-          onChange={(v) => setFilters((f) => ({ ...f, gebiet: v }))}
-          label={t("heute.gebiet")}
-          options={[{ value: "alle", label: t("heute.alle") }, ...GEBIETE.map((g) => ({ value: g, label: g }))]}
-        />
-        <Toggle active={filters.nurMeine} onClick={() => setFilters((f) => ({ ...f, nurMeine: !f.nurMeine }))}>
-          {t("heute.nurMeine")}
-        </Toggle>
-        <Toggle active={filters.nichtUebernommen} onClick={() => setFilters((f) => ({ ...f, nichtUebernommen: !f.nichtUebernommen }))}>
-          {t("heute.nichtUebernommen")}
-        </Toggle>
-        {activeFilters && (
-          <button onClick={() => setFilters(EMPTY_FILTERS)} className="text-[12px] text-brand-700 font-semibold hover:underline px-1">
-            {t("heute.filterZuruecksetzen")}
-          </button>
-        )}
-        <div className="flex-1" />
-        <span className="text-[12px] text-ink-3 tnum">
-          {filtered.length} / {list.length} {lang === "de" ? "Empfehlungen" : "recommendations"}
-        </span>
-      </div>
-
-      {/* ---------------- split view ---------------- */}
-      <div className="flex-1 min-h-0 flex px-5 pb-4 gap-4">
-        {/* list */}
-        <section className="w-full lg:w-[52%] xl:w-[48%] min-w-0 flex flex-col card overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-line bg-surface-1 flex items-center gap-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2">{t("heute.tagesliste")}</h2>
-            <div className="flex-1 max-w-[220px]">
-              <Progress
-                value={doneCount}
-                total={app.settings.kapazitaet}
-                label={t("heute.fortschritt", { done: doneCount, total: app.settings.kapazitaet })}
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto divide-y divide-[var(--color-line)]">
-            {filtered.length === 0 && (
-              <EmptyState
-                title={list.length === 0 ? t("heute.allesErledigt") : t("heute.leerFilter")}
-                hint={list.length === 0 ? t("heute.wiedervorlagen") : undefined}
-                action={
-                  activeFilters ? (
-                    <Btn onClick={() => setFilters(EMPTY_FILTERS)}>{t("heute.filterZuruecksetzen")}</Btn>
-                  ) : undefined
-                }
-              />
-            )}
-            {filtered.map((item) => {
-              const k = getKunde(item.kundeId)!;
-              const isSel = item.kundeId === selectedId;
-              const claim = app.claims[item.kundeId];
-              const isLeaving = leaving === item.kundeId;
-              return (
-                <button
-                  key={item.kundeId}
-                  onClick={() => app.setSelectedKunde(item.kundeId)}
-                  className={clsx(
-                    "w-full text-left px-4 py-3 relative transition-colors",
-                    isSel ? "bg-brand-50/70" : "hover:bg-surface-1",
-                    isLeaving && "anim-row-out",
-                  )}
-                >
-                  {isSel && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand" />}
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className={clsx(
-                        "w-[7px] h-[7px] rounded-full shrink-0",
-                        item.prioritaet === "hoch" ? "bg-brand-700" : item.prioritaet === "mittel" ? "bg-navy-800" : "bg-line-strong",
-                      )}
-                    />
-                    <span className="text-[13.5px] font-bold text-ink truncate">{k.name}</span>
-                    <span className="tnum text-[11.5px] text-ink-3 shrink-0">{k.nummer}</span>
-                    <span className="flex-1" />
-                    <span className="tnum text-[13px] font-bold text-navy-800 shrink-0">{euro(item.ev, loc)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-1.5 pl-[17px] flex-wrap">
-                    <Chip tone={toneOf(item.empfehlung.anlass)}>{t(`anlass.${item.empfehlung.anlass}` as "anlass.ueberfaellig")}</Chip>
-                    {item.empfehlung.nebenanlaesse.slice(0, 2).map((n) => (
-                      <Chip key={n.anlass} className="opacity-70">
-                        {t(`anlass.${n.anlass}` as "anlass.ueberfaellig")}
-                      </Chip>
-                    ))}
-                    {item.wiedervorlage && <Chip tone="brand">{t("heute.wiedervorlage")}</Chip>}
-                    {claim && (
-                      <span className="text-[11px] text-ink-3 italic">
-                        {claim === app.user.id
-                          ? t("akt.uebernommen", { name: t(app.user.nameKey) })
-                          : t("akt.uebernommen", { name: USERS.find((u) => u.id === claim)?.kurz ?? "–" })}
-                      </span>
-                    )}
-                    <span className="flex-1" />
-                    <span className="hidden sm:block text-[11.5px] text-ink-3 truncate max-w-[46%] text-right leading-tight">
-                      {reasonText(item.empfehlung.begruendung[0].code, item.empfehlung.begruendung[0].params, lang)}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* detail pane */}
-        <section className="hidden lg:flex flex-1 min-w-0 flex-col card overflow-hidden anim-fade-in">
-          {selectedItem && kunde ? (
-            <DetailPane
-              key={selectedItem.kundeId}
-              item={selectedItem}
-              warum={warum}
-              setWarum={setWarum}
-              onClaim={claimIt}
-              onEmail={() => setEmailOpen(true)}
-              onQuote={openQuote}
-              onDone={() => setErgebnisOpen(true)}
-              onLater={() => setSpaeterOpen(true)}
-              onField={() => app.toast(lang === "de" ? `Übergabe an Gebiet ${kunde.gebiet} erstellt.` : `Handed over to region ${kunde.gebiet}.`)}
-            />
-          ) : (
-            <EmptyState title={t("heute.keineAuswahl")} hint={t("heute.keineAuswahlHint")} />
-          )}
-        </section>
-      </div>
-
-      {/* ---------------- dialogs ---------------- */}
-      {selectedItem && kunde && (
-        <>
-          <ErgebnisDialog
-            open={ergebnisOpen}
-            onClose={() => setErgebnisOpen(false)}
-            onSave={(code, opts) => {
-              setErgebnisOpen(false);
-              finish(code, opts);
-            }}
-          />
-          <SpaeterDialog
-            open={spaeterOpen}
-            onClose={() => setSpaeterOpen(false)}
-            onPick={(bis) => {
-              setSpaeterOpen(false);
-              if (!selectedItem) return;
-              const id = selectedItem.kundeId;
-              app.setWiedervorlage(id, bis);
-              app.toast(t("toast.wiedervorlage", { datum: date(bis, loc) }));
-            }}
-          />
-          <EmailDialog open={emailOpen} onClose={() => setEmailOpen(false)} kundeId={selectedItem.kundeId} emp={selectedItem.empfehlung} />
-        </>
-      )}
     </div>
   );
 }
 
-/* ============================== helpers ============================== */
-
-function numDE(v: number) {
-  return new Intl.NumberFormat("de-DE").format(v);
-}
-
-function toneOf(a: Anlass) {
-  return a === "ueberfaellig" ? "overdue" : a === "faellig_bald" ? "due" : a === "abwanderung" ? "violet" : a === "branche" ? "azure" : "ok";
-}
-
-function Select({
-  value,
-  onChange,
-  label,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  label: string;
-  options: { value: string; label: string }[];
-}) {
+function AnlassChip({ anlass, n }: { anlass: string; n: number }) {
+  const map: Record<string, string> = {
+    ueberfaellig: "bg-red-50 text-red-600 border-red-100",
+    faellig_bald: "bg-blue-50 text-blue-700 border-blue-100",
+    abwanderung: "bg-violet-50 text-violet-700 border-violet-100",
+    branche: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    portal: "bg-amber-50 text-amber-700 border-amber-100",
+  };
+  const label: Record<string, string> = {
+    ueberfaellig: `Überfällig (${n})`,
+    faellig_bald: `Fällig`,
+    abwanderung: `Churn-Risiko`,
+    branche: `Branchenpotenzial`,
+    portal: `Portal`,
+  };
   return (
-    <label className="inline-flex items-center h-[30px] rounded-[8px] border border-line bg-surface-0 pl-2 pr-1 gap-1 text-[11.5px] hover:border-line-strong transition-colors">
-      <span className="text-ink-3 font-semibold">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="bg-transparent outline-none font-semibold text-ink py-0.5 max-w-[150px] cursor-pointer"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <span className={`inline-flex items-center h-6 px-2.5 rounded-full border text-[11.5px] font-semibold whitespace-nowrap ${map[anlass] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
+      {label[anlass] ?? anlass}
+    </span>
   );
 }
 
-function Toggle({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Dringlichkeit({ p, lang }: { p: string; lang: string }) {
+  const map: Record<string, string> = {
+    hoch: "bg-red-50 text-red-600 border-red-200",
+    mittel: "bg-amber-50 text-amber-700 border-amber-200",
+    niedrig: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  };
+  const label = p === "hoch" ? (lang === "de" ? "Sehr hoch" : "Very high") : p === "mittel" ? (lang === "de" ? "Mittel" : "Medium") : (lang === "de" ? "Niedrig" : "Low");
   return (
-    <button
-      onClick={onClick}
-      className={clsx(
-        "h-[30px] px-2.5 rounded-[8px] border text-[12px] font-semibold transition-all",
-        active ? "bg-navy-800 border-navy-800 text-white" : "bg-surface-0 border-line text-ink-2 hover:border-line-strong",
-      )}
-    >
-      {children}
+    <span className={`inline-flex items-center h-6 px-2.5 rounded-md border text-[11.5px] font-bold whitespace-nowrap ${map[p] ?? ""}`}>
+      {label}
+    </span>
+  );
+}
+
+function IconBtn({ children, title, href, onClick, accent }: { children: React.ReactNode; title: string; href?: string; onClick?: () => void; accent?: boolean }) {
+  const cls = `w-8 h-8 rounded-lg grid place-items-center border transition-colors ${accent ? "bg-[#2563eb] border-[#2563eb] text-white hover:bg-[#1d4ed8]" : "bg-white border-slate-200 text-slate-500 hover:border-[#2563eb] hover:text-[#2563eb]"}`;
+  if (href) return <a href={href} title={title} className={cls}>{children}</a>;
+  return <button title={title} onClick={onClick} className={cls}>{children}</button>;
+}
+
+function QuickAction({ icon, bg, title, sub, onClick }: { icon: React.ReactNode; bg: string; title: string; sub: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="text-left rounded-xl border border-slate-100 bg-slate-50/60 hover:bg-white hover:border-slate-200 hover:shadow-[0_8px_20px_-12px_rgba(16,41,58,.25)] transition-all p-2.5">
+      <span className={`w-8 h-8 rounded-lg ${bg} grid place-items-center mb-1.5`}>{icon}</span>
+      <span className="block text-[12.5px] font-bold text-slate-800 leading-tight">{title}</span>
+      <span className="block text-[11px] text-slate-400 leading-tight mt-0.5">{sub}</span>
     </button>
   );
 }
 
-/* ============================== detail pane ============================== */
-
-function DetailPane({
-  item,
-  warum,
-  setWarum,
-  onClaim,
-  onEmail,
-  onQuote,
-  onDone,
-  onLater,
-  onField,
-}: {
-  item: { kundeId: string; empfehlung: Empfehlung; ev: number; prioritaet: Prioritaet };
-  warum: boolean;
-  setWarum: (v: boolean) => void;
-  onClaim: () => void;
-  onEmail: () => void;
-  onQuote: () => void;
-  onDone: () => void;
-  onLater: () => void;
-  onField: () => void;
-}) {
-  const app = useApp();
-  const { t, lang } = useI18n();
-  const k = getKunde(item.kundeId)!;
-  const loc = lang === "de" ? "de-DE" : "en-GB";
-  const rows = getMessmittel(k.id, app.stichtag);
-  const betroffen = rows
-    .filter(
-      (r) =>
-        item.empfehlung.anlass === "ueberfaellig"
-          ? r.status === "ueberfaellig" || r.status === "teilabwanderung"
-          : item.empfehlung.anlass === "faellig_bald"
-            ? r.status === "faellig_bald"
-            : r.status !== "ok",
-    )
-    .slice(0, 7);
-  const buckets = getZeitstrahl(k.id, app.stichtag);
-  const claim = app.claims[k.id];
-
+function MiniSpark({ points, color }: { points: number[]; color: string }) {
+  const w = 72;
+  const h = 26;
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const path = points.map((v, i) => `${i === 0 ? "M" : "L"} ${(i / (points.length - 1)) * w} ${h - 3 - ((v - min) / Math.max(1, max - min)) * (h - 6)}`).join(" ");
+  const area = `${path} L ${w} ${h} L 0 ${h} Z`;
+  const id = `g${color.replace(/[^a-z0-9]/gi, "")}${points.length}`;
   return (
-    <>
-      {/* header */}
-      <div className="px-5 pt-4 pb-3 border-b border-line">
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-[17px] font-bold text-navy-800 leading-tight truncate">{k.name}</h2>
-              <span className="tnum text-[12.5px] text-ink-3">{k.nummer}</span>
-              <DemoBadge />
-            </div>
-            <p className="text-[12.5px] text-ink-2 mt-0.5">
-              {k.branche} · {k.ort} · {t("empf.gebiet")} {k.gebiet}
-            </p>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="tnum text-[19px] font-bold text-navy-800 leading-none" title={t("empf.wertHint")}>
-              {euro(item.ev, loc)}
-            </p>
-            <p className="text-[10.5px] text-ink-3 uppercase tracking-wider font-semibold mt-1">{t("empf.wert")}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-          <Chip tone={toneOf(item.empfehlung.anlass)}>{t(`anlass.${item.empfehlung.anlass}` as "anlass.ueberfaellig")}</Chip>
-          <PrioritaetsBadge p={item.prioritaet} lang={lang} />
-          <Chip>
-            <Target size={11} /> {t("empf.messmittelAnzahl", { n: item.empfehlung.betroffeneAnzahl })}
-          </Chip>
-          {item.empfehlung.nebenanlaesse.length > 0 && (
-            <span className="text-[11px] text-ink-3">
-              + {item.empfehlung.nebenanlaesse.length} {t("empf.nebenanlaesse").toLowerCase()}
-            </span>
-          )}
-          {claim && (
-            <Chip tone="navy">
-              <UserCheck size={11} />{" "}
-              {claim === app.user.id ? t("akt.uebernommen", { name: t(app.user.nameKey) }) : t("akt.uebernommen", { name: USERS.find((u) => u.id === claim)?.kurz ?? "–" })}
-            </Chip>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-        {/* Begründung */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2">{t("empf.begruendung")}</h3>
-            <button
-              onClick={() => setWarum(!warum)}
-              className="text-[12px] font-bold text-brand-700 hover:underline inline-flex items-center gap-1"
-            >
-              <Sparkles size={12} /> {t("empf.warum")}
-            </button>
-          </div>
-          <ul className="space-y-1.5">
-            {item.empfehlung.begruendung.map((r, i) => (
-              <li key={i} className="text-[13.5px] leading-relaxed text-ink flex gap-2">
-                <span className="text-brand-700 mt-[7px] w-1 h-1 rounded-full bg-brand-700 shrink-0" />
-                <span>{reasonText(r.code, r.params, lang)}</span>
-              </li>
-            ))}
-          </ul>
-          {warum && (
-            <div className="mt-3 card p-3.5 anim-pop">
-              <p className="text-[12px] font-bold text-navy-800 mb-2.5">{t("empf.warumTitel")}</p>
-              <FactorBars
-                lang={lang}
-                items={item.empfehlung.faktoren.map((f) => ({
-                  label: REASON_FACTOR_LABELS[f.code][lang],
-                  anteil: f.anteil,
-                }))}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Zeitstrahl */}
-        <div>
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2 mb-2">{t("empf.zeitstrahl")}</h3>
-          <div className="card p-3">
-            <Zeitstrahl buckets={buckets} stichtag={app.stichtag} lang={lang} compact />
-          </div>
-        </div>
-
-        {/* betroffene Messmittel */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2">{t("empf.messmittel")}</h3>
-            <Link href={`/kunden/${k.id}`} className="text-[12px] font-bold text-brand-700 hover:underline inline-flex items-center gap-1">
-              {t("empf.alleAnzeigen")} <ArrowRight size={12} />
-            </Link>
-          </div>
-          <div className="card overflow-hidden">
-            <table className="w-full text-[12.5px]">
-              <thead>
-                <tr className="bg-surface-1 text-[10.5px] uppercase tracking-wider text-ink-3">
-                  <th className="text-left font-bold px-3 py-1.5">{t("k360.spalten.ident")}</th>
-                  <th className="text-left font-bold px-3 py-1.5">{t("k360.spalten.gruppe")}</th>
-                  <th className="text-right font-bold px-3 py-1.5">{t("k360.spalten.faelligkeit")}</th>
-                  <th className="text-right font-bold px-3 py-1.5">{t("k360.spalten.status")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-line)]">
-                {betroffen.map((r) => (
-                  <tr key={r.id}>
-                    <td className="px-3 py-1.5 tnum text-ink-2">{r.ident}</td>
-                    <td className="px-3 py-1.5 text-ink">
-                      {r.typ}
-                      {r.geschaetzt && <span className="ml-1.5 text-[10px] text-due font-semibold">≈ {t("empf.geschaetzt").slice(0, 18)}…</span>}
-                    </td>
-                    <td className="px-3 py-1.5 text-right tnum text-ink-2">{date(r.faelligkeit, loc)}</td>
-                    <td className="px-3 py-1.5 text-right">
-                      <StatusPill status={r.status} lang={lang} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Kontakt */}
-        <div>
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2 mb-2">
-            {t("empf.ansprechpartner")} <DemoBadge />
-          </h3>
-          <div className="card p-3.5 grid grid-cols-2 gap-y-2 gap-x-4 text-[13px]">
-            <div>
-              <p className="font-semibold text-ink">{k.ansprech}</p>
-              <p className="text-ink-3 text-[12px]">{k.ort} · {k.gebiet}</p>
-            </div>
-            <div className="text-right space-y-1">
-              <a href={`tel:${k.telefon.replace(/[^0-9+]/g, "")}`} className="flex items-center justify-end gap-1.5 text-ink-2 hover:text-brand-700">
-                <Phone size={12} /> <span className="tnum">{k.telefon}</span>
-              </a>
-              <a href={`mailto:${k.email}`} className="flex items-center justify-end gap-1.5 text-ink-2 hover:text-brand-700 truncate">
-                <Mail size={12} /> <span className="truncate">{k.email}</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* action bar */}
-      <div className="border-t border-line px-4 py-3 bg-surface-1 flex items-center gap-1.5 flex-wrap">
-        {!claim ? (
-          <Btn variant="primary" onClick={onClaim} title="Ü">
-            <UserCheck size={14} /> {t("akt.uebernehmen")}
-          </Btn>
-        ) : (
-          <Btn variant="secondary" disabled title="Ü">
-            <Check size={14} /> {claim === app.user.id ? t("akt.uebernehmen") : t("akt.uebernommen", { name: USERS.find((u) => u.id === claim)?.kurz ?? "–" })}
-          </Btn>
-        )}
-        <a
-          href={`tel:${k.telefon.replace(/[^0-9+]/g, "")}`}
-          className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-[7px] text-[13px] font-semibold bg-surface-0 text-ink border border-line-strong hover:bg-surface-1 hover:border-ink-3 transition-all"
-        >
-          <Phone size={14} /> {t("akt.anrufen")}
-        </a>
-        <Btn variant="secondary" onClick={onEmail} title="E">
-          <Mail size={14} /> {t("akt.email")}
-        </Btn>
-        <Btn variant="dark" onClick={onQuote} title="A">
-          <FileTextIcon /> {t("akt.angebot")}
-        </Btn>
-        <div className="flex-1" />
-        <Btn variant="ghost" onClick={onLater} title="S">
-          <Timer size={14} /> {t("akt.spaeter")}
-        </Btn>
-        <Btn variant="ghost" onClick={onField}>
-          <MapPin size={14} /> <span className="hidden xl:inline">{t("akt.aussendienst")}</span>
-        </Btn>
-        <Btn variant="primary" onClick={onDone} title="D">
-          <Check size={14} /> {t("akt.erledigt")}
-        </Btn>
-      </div>
-    </>
-  );
-}
-
-function FileTextIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <path d="M8 13h8M8 17h5" />
+    <svg width={w} height={h} className="shrink-0" aria-hidden>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${id})`} />
+      <path d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
 
-/* ============================== dialogs ============================== */
-
-function ErgebnisDialog({
-  open,
-  onClose,
-  onSave,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSave: (code: ErgebnisCode, opts?: { note?: string; wettbewerber?: string; wiedervorlage?: string }) => void;
-}) {
-  const { t, lang } = useI18n();
-  const [code, setCode] = useState<ErgebnisCode | null>(null);
-  const [wettbewerber, setWettbewerber] = useState("");
-  const [note, setNote] = useState("");
-  const [wiedervorlage, setWiedervorlage] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setCode(null);
-      setWettbewerber("");
-      setNote("");
-      setWiedervorlage("");
-    }
-  }, [open]);
-
-  const options: { code: ErgebnisCode; label: string }[] = [
-    { code: "angebot", label: t("ergebnis.angebot") },
-    { code: "auftrag", label: t("ergebnis.auftrag") },
-    { code: "keinBedarf", label: t("ergebnis.keinBedarf") },
-    { code: "wettbewerber", label: t("ergebnis.wettbewerber") },
-    { code: "ausgemustert", label: t("ergebnis.ausgemustert") },
-    { code: "falscherKontakt", label: t("ergebnis.falscherKontakt") },
-    { code: "nichtErreicht", label: t("ergebnis.nichtErreicht") },
-  ];
-
-  return (
-    <Modal open={open} onClose={onClose} title={t("ergebnis.titel")}>
-      <div className="grid grid-cols-2 gap-2">
-        {options.map((o) => (
-          <button
-            key={o.code}
-            onClick={() => setCode(o.code)}
-            className={clsx(
-              "h-[42px] rounded-[9px] border text-[13px] font-semibold transition-all text-left px-3",
-              code === o.code
-                ? "border-brand-700 bg-brand-50 text-brand-700 shadow-[0_0_0_1px_var(--color-brand-700)]"
-                : "border-line hover:border-line-strong bg-surface-0 text-ink",
-            )}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
-
-      {code === "wettbewerber" && (
-        <div className="mt-3 anim-fade-up">
-          <p className="text-[12px] font-bold text-ink-2 mb-1.5">{t("ergebnis.wettbewerberFrage")}</p>
-          <div className="flex gap-1.5 flex-wrap">
-            {["Trescal", "Testo Industrial Services", "Hoffmann Group", "Hahn+Kolb", "Andere", "Unbekannt"].map((w) => (
-              <button
-                key={w}
-                onClick={() => setWettbewerber(w)}
-                className={clsx(
-                  "h-[26px] px-2.5 rounded-full border text-[12px] font-semibold transition-colors",
-                  wettbewerber === w ? "bg-navy-800 border-navy-800 text-white" : "border-line text-ink-2 hover:border-line-strong",
-                )}
-              >
-                {w}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="mt-4 space-y-3">
-        <label className="block">
-          <span className="text-[12px] font-bold text-ink-2">{t("ergebnis.notiz")}</span>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={2}
-            className="mt-1 w-full rounded-[8px] border border-line px-2.5 py-2 text-[13px] outline-none focus:border-brand-700 resize-none"
-          />
-        </label>
-        <label className="block">
-          <span className="text-[12px] font-bold text-ink-2">{t("ergebnis.wiedervorlage")}</span>
-          <input
-            type="date"
-            value={wiedervorlage}
-            onChange={(e) => setWiedervorlage(e.target.value)}
-            className="mt-1 block w-full rounded-[8px] border border-line px-2.5 py-2 text-[13px] tnum outline-none focus:border-brand-700"
-          />
-        </label>
-      </div>
-
-      <div className="mt-5 flex justify-end gap-2">
-        <Btn variant="ghost" onClick={onClose}>
-          {t("ergebnis.abbrechen")}
-        </Btn>
-        <Btn
-          variant="primary"
-          disabled={!code}
-          onClick={() => code && onSave(code, { note: note || undefined, wettbewerber: wettbewerber || undefined, wiedervorlage: wiedervorlage || undefined })}
-        >
-          {t("ergebnis.speichern")}
-        </Btn>
-      </div>
-      <p className="mt-3 text-[11px] text-ink-3">
-        {lang === "de" ? "In zwei Klicks erledigt: Option wählen, speichern." : "Two clicks: pick an outcome, save."}
-      </p>
-    </Modal>
-  );
+export function DashboardKpiPlaceholder() {
+  return null;
 }
-
-function SpaeterDialog({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (bis: string) => void }) {
-  const { t } = useI18n();
-  const app = useApp();
-  const presets = [
-    { label: t("ergebnis.spaeterMorgen"), date: addDays(app.stichtag, 1) },
-    { label: t("ergebnis.spaeterWoche"), date: addDays(app.stichtag, 7) },
-    { label: t("ergebnis.spaeter4Wochen"), date: addDays(app.stichtag, 28) },
-  ];
-  return (
-    <Modal open={open} onClose={onClose} title={t("ergebnis.spaeterBis")}>
-      <div className="grid grid-cols-3 gap-2">
-        {presets.map((p) => (
-          <button
-            key={p.label}
-            onClick={() => onPick(p.date)}
-            className="h-[64px] rounded-[10px] border border-line hover:border-brand-700 hover:bg-brand-50 transition-colors flex flex-col items-center justify-center gap-1"
-          >
-            <Calendar size={15} className="text-brand-700" />
-            <span className="text-[12.5px] font-semibold text-ink">{p.label}</span>
-            <span className="tnum text-[11px] text-ink-3">{p.date.slice(8)}.{p.date.slice(5, 7)}.</span>
-          </button>
-        ))}
-      </div>
-      <label className="block mt-4">
-        <span className="text-[12px] font-bold text-ink-2">{t("ergebnis.spaeterDatum")}</span>
-        <input
-          type="date"
-          onChange={(e) => e.target.value && onPick(e.target.value)}
-          className="mt-1 block w-full rounded-[8px] border border-line px-2.5 py-2 text-[13px] tnum outline-none focus:border-brand-700"
-        />
-      </label>
-    </Modal>
-  );
-}
-
-function EmailDialog({ open, onClose, kundeId, emp }: { open: boolean; onClose: () => void; kundeId: string; emp: Empfehlung }) {
-  const app = useApp();
-  const { t, lang } = useI18n();
-  const [tab, setTab] = useState<"mail" | "leitfaden">("mail");
-  const [copied, setCopied] = useState(false);
-  const k = getKunde(kundeId);
-  if (!k) return null;
-
-  const mail = buildEmail(k, emp, emp.anlass, lang, app.user, t(app.user.nameKey), t);
-  const guide = buildLeitfaden(k, emp, emp.anlass, lang, t);
-  const body = tab === "mail" ? mail.text : guide.absatz.map((a) => `${a.label}:\n${a.text}`).join("\n\n");
-
-  const copy = () => {
-    navigator.clipboard?.writeText(tab === "mail" ? `Betreff: ${mail.betreff}\n\n${mail.text}` : body);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  };
-
-  const download = () => {
-    const blob = new Blob([buildEml(k, mail)], { type: "message/rfc822" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Entwurf-${k.nummer}.eml`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const mailto = `mailto:${k.email}?subject=${encodeURIComponent(mail.betreff)}&body=${encodeURIComponent(mail.text)}`;
-
-  return (
-    <Modal open={open} onClose={onClose} title={tab === "mail" ? t("email.titel") : t("leitfaden.titel")} wide>
-      <div className="flex items-center gap-2 mb-3">
-        <button
-          onClick={() => setTab("mail")}
-          className={clsx("h-[30px] px-3 rounded-[8px] text-[12.5px] font-semibold border transition-colors", tab === "mail" ? "bg-navy-800 text-white border-navy-800" : "border-line text-ink-2")}
-        >
-          {t("akt.email")}
-        </button>
-        <button
-          onClick={() => setTab("leitfaden")}
-          className={clsx("h-[30px] px-3 rounded-[8px] text-[12.5px] font-semibold border transition-colors", tab === "leitfaden" ? "bg-navy-800 text-white border-navy-800" : "border-line text-ink-2")}
-        >
-          {t("leitfaden.titel")}
-        </button>
-        <span className="flex-1" />
-        <span className="text-[11px] text-ink-3">{tab === "mail" ? t("email.sieForm") : "≤ 150 Wörter"}</span>
-      </div>
-
-      {tab === "mail" && (
-        <div className="mb-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-ink-3 mb-1">{t("email.betreff")}</p>
-          <p className="text-[13.5px] font-semibold text-ink bg-surface-1 border border-line rounded-[8px] px-3 py-2">{mail.betreff}</p>
-        </div>
-      )}
-
-      <div className="rounded-[10px] border border-line bg-surface-1 p-4 text-[13.5px] leading-relaxed text-ink whitespace-pre-wrap max-h-[46vh] overflow-y-auto">
-        {body}
-      </div>
-
-      <div className="mt-4 flex items-center gap-2 flex-wrap">
-        <Btn variant="primary" onClick={copy}>
-          {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? t("email.kopiert") : t("email.kopieren")}
-        </Btn>
-        {tab === "mail" && (
-          <>
-            <Btn variant="secondary" onClick={() => window.open(mailto, "_blank")}>
-              <Mail size={14} /> {t("email.outlook")}
-            </Btn>
-            <Btn variant="secondary" onClick={download}>
-              <Download size={14} /> {t("email.eml")}
-            </Btn>
-          </>
-        )}
-        <span className="flex-1" />
-        <span className="text-[11.5px] text-ink-3">{t("email.hinweis")}</span>
-      </div>
-    </Modal>
-  );
-}
-
-

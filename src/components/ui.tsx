@@ -22,13 +22,13 @@ export function Btn({
   size?: "sm" | "md";
 }) {
   const base =
-    "inline-flex items-center justify-center gap-1.5 rounded-[7px] font-semibold transition-all duration-150 select-none disabled:opacity-45 disabled:pointer-events-none whitespace-nowrap";
+    "inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-all duration-150 select-none disabled:opacity-45 disabled:pointer-events-none whitespace-nowrap";
   const sizes = { sm: "h-7 px-2.5 text-[12px]", md: "h-9 px-3.5 text-[13px]" }[size];
   const variants = {
-    primary: "bg-brand-700 text-white hover:bg-[#9c4200] active:translate-y-px shadow-[0_1px_2px_rgba(16,41,58,.18)]",
-    secondary: "bg-surface-0 text-ink border border-line-strong hover:bg-surface-1 hover:border-ink-3 active:translate-y-px",
+    primary: "bg-brand-700 text-white hover:bg-[#9c4200] active:translate-y-px shadow-[0_6px_16px_-8px_rgba(184,78,0,.7)]",
+    secondary: "bg-surface-0 text-ink border border-line-strong hover:bg-surface-1 hover:border-ink-3 active:translate-y-px shadow-[0_1px_2px_rgba(16,41,58,.06)]",
     ghost: "text-ink-2 hover:bg-surface-2 hover:text-ink",
-    dark: "bg-navy-800 text-white hover:bg-navy-700 active:translate-y-px",
+    dark: "bg-navy-800 text-white hover:bg-navy-700 active:translate-y-px shadow-[0_6px_16px_-10px_rgba(11,30,44,.8)]",
     danger: "bg-critical text-white hover:brightness-90 active:translate-y-px",
   }[variant];
   return (

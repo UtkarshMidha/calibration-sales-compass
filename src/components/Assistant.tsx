@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { Check, ChevronRight, Send, X } from "lucide-react";
+import { Check, ChevronRight, Send, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { answer, SUGGESTIONS, type ChatMessage, type Part } from "@/lib/assistant";
@@ -12,21 +12,57 @@ import { buildEmail } from "@/lib/content";
 import { useApp } from "@/lib/store";
 import { ANLASS_TONE, Btn, Chip, Sparkline } from "./ui";
 
+const ASSISTANT_STORAGE_KEY = "pecal-assistant-v1";
+
+function loadAssistantHistory(): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(ASSISTANT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as ChatMessage[];
+    return Array.isArray(parsed) ? parsed.slice(-50) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function AssistantDrawer() {
   const app = useApp();
   const { t, lang } = useI18n();
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const idRef = useRef(1);
 
+  /* history persists locally until the user resets it */
+  useEffect(() => {
+    setMessages(loadAssistantHistory());
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(ASSISTANT_STORAGE_KEY, JSON.stringify(messages.slice(-50)));
+    } catch {
+      /* quota – history stays in memory */
+    }
+  }, [messages, hydrated]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing, app.assistantOpen]);
 
-  if (!app.assistantOpen) return null;
+  const resetHistory = () => {
+    setMessages([]);
+    try {
+      localStorage.removeItem(ASSISTANT_STORAGE_KEY);
+    } catch {
+      /* noop */
+    }
+  };
 
   const send = (text: string) => {
     const q = text.trim();
@@ -125,14 +161,22 @@ export function AssistantDrawer() {
     }
   };
 
-  const ctxLabel = app.selectedKunde
-    ? `Kunde ${app.selectedKunde}${getKunde(app.selectedKunde)?.name ? ` · ${getKunde(app.selectedKunde)!.name}` : ""}`
-    : window.location.pathname === "/"
-      ? t("nav.heute")
-      : t("app.name");
+  const ctxLabel =
+    typeof window === "undefined"
+      ? t("app.name")
+      : app.selectedKunde
+        ? `Kunde ${app.selectedKunde}${getKunde(app.selectedKunde)?.name ? ` · ${getKunde(app.selectedKunde)!.name}` : ""}`
+        : window.location.pathname === "/"
+          ? t("nav.dashboard")
+          : t("app.name");
+
+  const open = app.assistantOpen;
 
   return (
-    <aside className="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-[65] bg-surface-0 border-l border-line shadow-pop flex flex-col anim-slide-in no-print">
+    <aside
+      aria-hidden={!open}
+      className={`fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-[65] bg-surface-0 border-l border-line shadow-pop flex flex-col no-print transition-transform duration-200 ease-out ${open ? "translate-x-0" : "translate-x-full pointer-events-none"}`}
+    >
       <header className="px-4 py-3 border-b border-line flex items-start gap-3">
         <span className="w-8 h-8 rounded-[9px] bg-gradient-to-br from-brand to-brand-700 grid place-items-center shrink-0 shadow-[0_3px_10px_-3px_rgba(255,112,0,.7)]">
           <span className="w-1.5 h-1.5 rounded-full bg-white" />
@@ -141,6 +185,14 @@ export function AssistantDrawer() {
           <h2 className="text-[14px] font-bold text-navy-800 leading-tight">{t("assistent.titel")}</h2>
           <p className="text-[11.5px] text-ink-3 leading-tight">{t("assistent.unter")}</p>
         </div>
+        <button
+          onClick={resetHistory}
+          title={lang === "de" ? "Verlauf löschen" : "Clear history"}
+          aria-label={lang === "de" ? "Verlauf löschen" : "Clear history"}
+          className="p-1.5 text-ink-3 hover:text-critical hover:bg-surface-1 rounded-[7px] transition-colors"
+        >
+          <Trash2 size={15} />
+        </button>
         <button onClick={() => app.setAssistantOpen(false)} aria-label={t("common.schliessen")} className="p-1 text-ink-3 hover:text-ink">
           <X size={16} />
         </button>

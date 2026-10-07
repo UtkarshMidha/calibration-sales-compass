@@ -5,10 +5,14 @@ import {
   ChartColumn,
   CircleHelp,
   Command,
+  FileText,
+  LayoutDashboard,
   ListChecks,
   Rocket,
+  Ruler,
   Settings as SettingsIcon,
   ShieldCheck,
+  Sparkles,
   Users,
   X,
 } from "lucide-react";
@@ -16,24 +20,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { USERS } from "@/lib/data";
-import { dateWeekday, kw } from "@/lib/format";
+import { dateWeekday, kw, num } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { useDashboard } from "@/lib/real-data";
 import { useApp } from "@/lib/store";
 import { Btn, Kbd, Modal, Segmented } from "./ui";
 
-const NAV = [
-  { href: "/", icon: ListChecks, key: "nav.heute" as const },
-  { href: "/kunden", icon: Users, key: "nav.kunden" as const },
-  { href: "/cockpit", icon: ChartColumn, key: "nav.cockpit" as const },
-  { href: "/modellguete", icon: ShieldCheck, key: "nav.modellguete" as const },
-  { href: "/einstellungen", icon: SettingsIcon, key: "nav.einstellungen" as const },
-];
-
 function pageTitle(pathname: string, t: ReturnType<typeof useI18n>["t"]): string {
-  if (pathname === "/") return t("nav.heute");
-  if (pathname.startsWith("/kunden/")) return t("nav.kunden") + " · 360";
+  if (pathname === "/") return t("nav.dashboard");
+  if (pathname.startsWith("/tagesliste")) return t("nav.tagesliste");
+  if (pathname.startsWith("/kunden/")) return `${t("nav.kunden")} · 360`;
   if (pathname.startsWith("/kunden")) return t("kunden.titel");
-  if (pathname.startsWith("/angebote")) return t("angebot.titel");
+  if (pathname.startsWith("/messmittel")) return t("nav.messmittel");
+  if (pathname.startsWith("/angebote")) return t("nav.angebote");
   if (pathname.startsWith("/cockpit")) return t("cockpit.titel");
   if (pathname.startsWith("/modellguete")) return t("modell.titel");
   if (pathname.startsWith("/einstellungen")) return t("einst.titel");
@@ -46,6 +45,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [userMenu, setUserMenu] = useState(false);
+  const isLeitung = app.user.role === "leitung";
 
   /* global shortcuts */
   useEffect(() => {
@@ -79,69 +79,171 @@ export function Shell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [app]);
 
+  const arbeit = [
+    { href: "/", icon: LayoutDashboard, key: "nav.dashboard" as const, match: (p: string) => p === "/" },
+    { href: "/tagesliste", icon: ListChecks, key: "nav.tagesliste" as const, match: (p: string) => p.startsWith("/tagesliste") },
+    { href: "/kunden", icon: Users, key: "nav.kunden" as const, match: (p: string) => p.startsWith("/kunden") },
+    { href: "/messmittel", icon: Ruler, key: "nav.messmittel" as const, match: (p: string) => p.startsWith("/messmittel") },
+    { href: "/angebote", icon: FileText, key: "nav.angebote" as const, match: (p: string) => p.startsWith("/angebote") },
+  ];
+  const leitung = [
+    { href: "/cockpit", icon: ChartColumn, key: "nav.cockpit" as const, match: (p: string) => p.startsWith("/cockpit") },
+  ];
+  const system = [
+    { href: "/modellguete", icon: ShieldCheck, key: "nav.vertrauen" as const, match: (p: string) => p.startsWith("/modellguete") },
+    { href: "/einstellungen", icon: SettingsIcon, key: "nav.einstellungen" as const, match: (p: string) => p.startsWith("/einstellungen") },
+  ];
+
+  const renderItem = (item: { href: string; icon: typeof Users; key: Parameters<typeof t>[0]; match: (p: string) => boolean }) => {
+    const Icon = item.icon;
+    const active = item.match(pathname);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        className={clsx(
+          "navitem flex items-center gap-2.5 rounded-xl px-3 h-10 text-[13.5px] font-semibold",
+          active
+            ? "bg-[#2563eb] text-white shadow-[0_8px_18px_-10px_rgba(37,99,235,.8)]"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+        )}
+      >
+        <Icon size={17} strokeWidth={active ? 2.2 : 1.9} className={clsx(active ? "text-white" : "text-slate-400")} />
+        <span className="truncate">{t(item.key)}</span>
+        {item.href === "/tagesliste" && !active && (
+          <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold grid place-items-center tnum">
+            12
+          </span>
+        )}
+      </Link>
+    );
+  };
+
   return (
     <div className="h-screen flex overflow-hidden">
-      {/* ---------------- nav rail ---------------- */}
-      <nav className="w-[92px] shrink-0 bg-navy-900 text-white flex flex-col items-stretch py-3 relative no-print">
-        <Link href="/" className="flex flex-col items-center gap-1 px-2 pb-3 mb-1" aria-label="PeCal Kompass">
-          <span className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-brand to-brand-700 grid place-items-center shadow-[0_4px_14px_-4px_rgba(255,112,0,.7)]">
-            <span className="font-black text-[15px] tracking-tight text-white">PK</span>
-          </span>
-          <span className="text-[9.5px] font-bold tracking-[0.14em] text-white/50 uppercase">Kompass</span>
-        </Link>
-
-        <div className="flex-1 flex flex-col gap-1 px-2">
-          {NAV.map(({ href, icon: Icon, key }) => {
-            const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={clsx(
-                  "group relative flex flex-col items-center gap-1 rounded-[10px] py-2.5 transition-colors",
-                  active ? "bg-white/10 text-white" : "text-white/55 hover:text-white hover:bg-white/[.06]",
-                )}
-                aria-current={active ? "page" : undefined}
-              >
-                {active && <span className="absolute left-[-8px] top-2 bottom-2 w-[3px] rounded-full bg-brand" />}
-                <Icon size={19} strokeWidth={active ? 2.3 : 1.8} />
-                <span className="text-[9.5px] font-semibold leading-none">{t(key)}</span>
-              </Link>
-            );
-          })}
-        </div>
-
-        <div className="px-2 flex flex-col gap-1 items-center">
-          <button
-            onClick={() => app.setAssistantOpen(true)}
-            title={`${t("assistent.titel")} (Strg+J)`}
-            className="w-full flex flex-col items-center gap-1 rounded-[10px] py-2.5 text-white/55 hover:text-white hover:bg-white/[.06] transition-colors"
-          >
-            <span className="w-[19px] h-[19px] rounded-full bg-brand/90 grid place-items-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+      {/* ---------------- light sidebar ---------------- */}
+      <aside className="w-[248px] shrink-0 bg-white border-r border-slate-200/90 hidden md:flex flex-col no-print">
+        <div className="px-4 pt-4 pb-3">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#2563eb] to-[#1e3a5f] grid place-items-center shadow-[0_8px_18px_-8px_rgba(37,99,235,.7)]">
+              <Sparkles size={17} className="text-white" />
             </span>
-            <span className="text-[9.5px] font-semibold leading-none">Assistent</span>
-          </button>
+            <span className="leading-tight">
+              <span className="block text-[14.5px] font-extrabold tracking-tight text-slate-900">PeCal Kompass</span>
+              <span className="block text-[11px] text-slate-400 font-medium">Ihr KI-Vertriebsassistent</span>
+            </span>
+          </Link>
           <button
-            onClick={() => app.setHelpOpen(true)}
-            title={t("help.titel")}
-            className="w-full flex flex-col items-center gap-1 rounded-[10px] py-2.5 text-white/45 hover:text-white hover:bg-white/[.06] transition-colors"
+            onClick={() => app.setPaletteOpen(true)}
+            className="mt-3.5 w-full flex items-center gap-2 h-9 pl-3 pr-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 transition-colors text-slate-400"
           >
-            <CircleHelp size={18} />
-            <span className="text-[9.5px] font-semibold leading-none">?</span>
+            <Command size={13} />
+            <span className="text-[12.5px] flex-1 text-left font-medium">{t("header.suche")}</span>
+            <Kbd>⌘K</Kbd>
           </button>
         </div>
-      </nav>
+
+        <nav className="flex-1 overflow-y-auto px-3 pb-3 space-y-5">
+          <div>
+            <p className="px-2 mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-400">{t("nav.arbeit")}</p>
+            <div className="space-y-1">{arbeit.map(renderItem)}</div>
+          </div>
+          {isLeitung && (
+            <div>
+              <p className="px-2 mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-400">{t("nav.leitung")}</p>
+              <div className="space-y-1">{leitung.map(renderItem)}</div>
+            </div>
+          )}
+          {isLeitung && (
+            <div>
+              <p className="px-2 mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-400">{t("nav.system")}</p>
+              <div className="space-y-1">
+                {system.map((item) => {
+                  const Icon = item.icon;
+                  const active = item.match(pathname);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={clsx(
+                        "navitem flex items-center gap-2.5 rounded-xl px-3 h-9 text-[13px] font-medium",
+                        active ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800",
+                      )}
+                    >
+                      <Icon size={16} className={clsx(active ? "text-white" : "text-slate-400")} />
+                      <span className="truncate">{t(item.key)}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </nav>
+
+        <div className="p-3 space-y-2.5 border-t border-slate-100">
+          <div className="rounded-xl bg-slate-50 border border-slate-200/80 px-3 py-2.5 flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,.18)] shrink-0" />
+            <Datenstand />
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setUserMenu((v) => !v)}
+              className="w-full flex items-center gap-2.5 rounded-xl hover:bg-slate-100 transition-colors px-2 py-2"
+            >
+              <span className="w-8 h-8 rounded-full bg-slate-900 text-white grid place-items-center text-[12px] font-bold shrink-0">
+                {app.user.kurz.split(" ").map((x) => x[0]).join("").replace(".", "").slice(0, 2)}
+              </span>
+              <span className="text-left leading-tight min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold text-slate-900 truncate">{t(app.user.nameKey)}</span>
+                <span className="block text-[11px] text-slate-400">
+                  {app.user.role === "inside" ? t("header.rolle.inside") : t("header.rolle.leitung")}
+                </span>
+              </span>
+            </button>
+            {userMenu && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={() => setUserMenu(false)} />
+                <div className="absolute left-0 right-0 bottom-[52px] z-40 card shadow-pop p-1.5 anim-pop no-print">
+                  <p className="px-2 py-1.5 text-[10.5px] font-bold uppercase tracking-wider text-ink-3">
+                    {t("header.wechseln")}
+                  </p>
+                  {USERS.map((u) => (
+                    <button
+                      key={u.id}
+                      onClick={() => {
+                        app.setUser(u.id);
+                        setUserMenu(false);
+                        if (u.role === "leitung") router.push("/cockpit");
+                        else router.push("/");
+                      }}
+                      className={clsx(
+                        "w-full text-left px-2 py-2 rounded-[10px] text-[13px] flex items-center justify-between hover:bg-surface-1",
+                        u.id === app.user.id ? "font-bold text-navy-800" : "text-ink",
+                      )}
+                    >
+                      <span>{t(u.nameKey)}</span>
+                      <span className="text-[11px] text-ink-3">
+                        {u.role === "inside" ? t("header.rolle.inside") : t("header.rolle.leitung")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </aside>
 
       {/* ---------------- main column ---------------- */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-[54px] shrink-0 bg-surface-0 border-b border-line flex items-center gap-3 px-5 no-print">
-          <h1 className="text-[15px] font-bold text-navy-800 whitespace-nowrap">{pageTitle(pathname, t)}</h1>
+        <header className="h-[56px] shrink-0 bg-white/85 backdrop-blur border-b border-slate-200/90 flex items-center gap-3 px-5 no-print">
+          <h1 className="text-[15px] font-bold text-slate-900 whitespace-nowrap">{pageTitle(pathname, t)}</h1>
 
-          <span className="hidden sm:inline-flex items-center gap-2 h-[26px] pl-2 pr-2.5 rounded-full bg-surface-1 border border-line text-[11.5px] text-ink-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand animate-[pulse-soft_2.4s_ease-in-out_infinite]" />
-            <span className="text-ink-3 font-semibold uppercase text-[9.5px] tracking-wider">{t("header.stichtag")}</span>
-            <span className="tnum font-semibold text-navy-800">
+          <span className="hidden sm:inline-flex items-center gap-2 h-[28px] pl-2 pr-2.5 rounded-full bg-slate-100 border border-slate-200 text-[11.5px] text-slate-600">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#ff7000] animate-[pulse-soft_2.4s_ease-in-out_infinite]" />
+            <span className="text-slate-400 font-semibold uppercase text-[9.5px] tracking-wider">{t("header.stichtag")}</span>
+            <span className="tnum font-semibold text-slate-800">
               {dateWeekday(app.stichtag, lang === "de" ? "de-DE" : "en-GB")} · KW {kw(app.stichtag)}
             </span>
           </span>
@@ -149,12 +251,10 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="flex-1" />
 
           <button
-            onClick={() => app.setPaletteOpen(true)}
-            className="group flex items-center gap-2 h-[32px] pl-2.5 pr-2 rounded-[8px] border border-line bg-surface-1 hover:bg-surface-0 hover:border-line-strong transition-colors text-ink-3 min-w-[220px] max-w-[320px]"
+            onClick={() => app.setAssistantOpen(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 h-[32px] px-3 rounded-[10px] bg-[#2563eb] text-white text-[12.5px] font-semibold hover:bg-[#1d4ed8] transition-colors shadow-[0_8px_18px_-10px_rgba(37,99,235,.9)]"
           >
-            <Command size={13} />
-            <span className="text-[12.5px] flex-1 text-left">{t("header.suche")}</span>
-            <Kbd>⌘K</Kbd>
+            <Sparkles size={14} /> {t("assistent.titel")}
           </button>
 
           <Segmented
@@ -170,7 +270,7 @@ export function Shell({ children }: { children: ReactNode }) {
             onClick={() => (app.pitch ? app.resetPitch() : app.applyPitch())}
             title={app.pitch ? t("header.pitchReset") : t("header.pitchAn")}
             className={clsx(
-              "flex items-center gap-1.5 h-[28px] px-2.5 rounded-full border text-[11.5px] font-bold uppercase tracking-wide transition-colors",
+              "flex items-center gap-1.5 h-[30px] px-2.5 rounded-full border text-[11.5px] font-bold uppercase tracking-wide transition-colors",
               app.pitch
                 ? "bg-brand-700 border-brand-700 text-white"
                 : "border-line-strong text-ink-3 hover:text-brand-700 hover:border-brand-700",
@@ -180,53 +280,39 @@ export function Shell({ children }: { children: ReactNode }) {
             Pitch
           </button>
 
-          {/* user */}
-          <div className="relative">
-            <button
-              onClick={() => setUserMenu((v) => !v)}
-              className="flex items-center gap-2 h-[34px] pl-1 pr-2.5 rounded-full hover:bg-surface-1 transition-colors"
-            >
-              <span className="w-[26px] h-[26px] rounded-full bg-navy-800 text-white grid place-items-center text-[11px] font-bold">
-                {app.user.kurz.split(" ").map((x) => x[0]).join("").replace(".", "").slice(0, 2)}
-              </span>
-              <span className="hidden md:block text-left leading-tight">
-                <span className="block text-[12.5px] font-semibold text-ink">{t(app.user.nameKey)}</span>
-                <span className="block text-[10.5px] text-ink-3">
-                  {app.user.role === "inside" ? t("header.rolle.inside") : t("header.rolle.leitung")}
-                </span>
-              </span>
-            </button>
-            {userMenu && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setUserMenu(false)} />
-                <div className="absolute right-0 top-[40px] z-40 w-60 card shadow-pop p-1.5 anim-pop no-print">
-                  <p className="px-2 py-1.5 text-[10.5px] font-bold uppercase tracking-wider text-ink-3">
-                    {t("header.wechseln")}
-                  </p>
-                  {USERS.map((u) => (
-                    <button
-                      key={u.id}
-                      onClick={() => {
-                        app.setUser(u.id);
-                        setUserMenu(false);
-                        if (u.role === "leitung") router.push("/cockpit");
-                      }}
-                      className={clsx(
-                        "w-full text-left px-2 py-2 rounded-[7px] text-[13px] flex items-center justify-between hover:bg-surface-1",
-                        u.id === app.user.id ? "font-bold text-navy-800" : "text-ink",
-                      )}
-                    >
-                      <span>{t(u.nameKey)}</span>
-                      <span className="text-[11px] text-ink-3">
-                        {u.role === "inside" ? t("header.rolle.inside") : t("header.rolle.leitung")}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          <button
+            onClick={() => app.setHelpOpen(true)}
+            title={t("help.titel")}
+            className="w-8 h-8 grid place-items-center rounded-[10px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            <CircleHelp size={17} />
+          </button>
         </header>
+
+        {/* mobile nav */}
+        <nav className="md:hidden shrink-0 bg-white border-b border-slate-200/90 flex items-center gap-1 px-3 py-2 overflow-x-auto no-print">
+          {[
+            { href: "/", label: t("nav.dashboard") },
+            { href: "/tagesliste", label: t("nav.tagesliste") },
+            { href: "/kunden", label: t("kunden.titel") },
+            { href: "/messmittel", label: t("nav.messmittel") },
+            { href: "/angebote", label: t("nav.angebote") },
+            ...(isLeitung ? [{ href: "/cockpit", label: t("cockpit.titel") }] : []),
+          ].map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={clsx(
+                "h-8 px-3 rounded-lg text-[12.5px] font-semibold whitespace-nowrap grid place-items-center",
+                pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href))
+                  ? "bg-[#2563eb] text-white"
+                  : "text-slate-500 hover:bg-slate-100",
+              )}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
 
         <main className="flex-1 min-h-0 overflow-hidden">{children}</main>
       </div>
@@ -234,7 +320,7 @@ export function Shell({ children }: { children: ReactNode }) {
       {/* ---------------- toasts ---------------- */}
       <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 items-center no-print" aria-live="polite">
         {app.toasts.map((toast) => (
-          <div key={toast.id} className="anim-fade-up flex items-center gap-3 bg-navy-900 text-white rounded-[10px] pl-4 pr-2 py-2.5 shadow-pop">
+          <div key={toast.id} className="anim-fade-up flex items-center gap-3 bg-navy-900 text-white rounded-[12px] pl-4 pr-2 py-2.5 shadow-pop">
             <span className="text-[13px]">{toast.message}</span>
             {toast.action && (
               <button
@@ -256,6 +342,11 @@ export function Shell({ children }: { children: ReactNode }) {
 
       {/* ---------------- help ---------------- */}
       <Modal open={app.helpOpen} onClose={() => app.setHelpOpen(false)} title={t("help.titel")}>
+        <p className="text-[13px] text-ink-2 mb-4">
+          {lang === "de"
+            ? "Demo-Flow (4–5 Min): Dashboard → Tagesliste → Kunde → Angebot → Cockpit (Leitung) → Assistent."
+            : "Demo flow (4–5 min): Dashboard → Daily list → Customer → Quote → Cockpit (management) → Assistant."}
+        </p>
         <ul className="space-y-2.5">
           {([
             ["J / K", t("help.jk")],
@@ -285,6 +376,26 @@ export function Shell({ children }: { children: ReactNode }) {
           </Btn>
         </div>
       </Modal>
+    </div>
+  );
+}
+
+function Datenstand() {
+  const { lang } = useI18n();
+  const { data: real } = useDashboard();
+  const loc = lang === "de" ? "de-DE" : "en-GB";
+  const n = real?.kpis.ueberfaellig ?? 64915;
+  return (
+    <div className="leading-tight">
+      <p className="text-[11.5px] font-bold text-slate-800">Datenstand 25.09.2026</p>
+      <p className="tnum text-[11px] text-slate-500">
+        {num(n, 0, loc)} {lang === "de" ? "überfällige Messmittel" : "overdue instruments"}
+      </p>
+      {real && (
+        <p className="text-[10px] text-emerald-600 font-semibold">
+          {lang === "de" ? "● echte CSV-Snapshots" : "● real CSV snapshots"}
+        </p>
+      )}
     </div>
   );
 }

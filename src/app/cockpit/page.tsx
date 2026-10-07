@@ -32,6 +32,31 @@ export default function CockpitPage() {
   const loc = lang === "de" ? "de-DE" : "en-GB";
   const [showBaseline, setShowBaseline] = useState(false);
 
+  if (app.user.role !== "leitung") {
+    return (
+      <div className="h-full overflow-y-auto px-5 py-4">
+        <div className="max-w-xl mx-auto card p-8 text-center mt-10 anim-fade-up">
+          <p className="text-[15px] font-bold text-slate-900">
+            {lang === "de" ? "Cockpit ist der Vertriebsleitung vorbehalten." : "The cockpit is reserved for sales management."}
+          </p>
+          <p className="text-[13px] text-slate-500 mt-1.5">
+            {lang === "de"
+              ? "Wechseln Sie oben rechts zu Thomas Brandt, um Prognose, Risiko und Team zu sehen – oder arbeiten Sie mit Dashboard und Tagesliste weiter."
+              : "Switch to Thomas Brandt (top right) to see forecast, risk and team – or continue with dashboard and daily list."}
+          </p>
+          <div className="mt-4 flex justify-center gap-2">
+            <Link href="/" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[10px] bg-[#2563eb] text-white text-[13px] font-semibold">
+              {t("nav.dashboard")}
+            </Link>
+            <Link href="/tagesliste" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[10px] border border-slate-200 text-[13px] font-semibold text-slate-700">
+              {t("nav.tagesliste")}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const agg = getCockpitAggregates();
 
   const kpis = [

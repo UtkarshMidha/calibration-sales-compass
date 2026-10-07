@@ -1,0 +1,161 @@
+{
+  "source": "MSSQL PeCalHackathon2026 (read-only)",
+  "exported_at": "2026-10-07T14:20:33",
+  "format": "UTF-8, comma, RFC 4180 quoting, NULL=empty, timestamps ISO 'YYYY-MM-DD HH:MM:SS.fff', bit=0/1, decimal point '.'",
+  "tables": {
+    "ArtikelnummerZeit": {
+      "file": "ArtikelnummerZeit.csv",
+      "rows": 1759,
+      "expected_rows": 1759,
+      "columns": [
+        "Artikelnummer",
+        "Beschreibung",
+        "BearbeitungszeitMin"
+      ],
+      "bytes": 94533
+    },
+    "AUFTRAGSPOSITIONEN": {
+      "file": "AUFTRAGSPOSITIONEN.csv",
+      "rows": 536573,
+      "expected_rows": 536573,
+      "columns": [
+        "UUID",
+        "SAPNUMMER",
+        "DATUM_ERSTELLT",
+        "KALIBRIERGEGENSTANDIDENTNUMMER",
+        "KALIBRIERGEGENSTANDUUID",
+        "statusPosition",
+        "LASERSIGNIEREN",
+        "SCHMELZTAUCHEN",
+        "dAkks_KAL",
+        "werks_KAL",
+        "AUFTRAGSPOSITIONSQUELLE",
+        "KALIBRIERGEGENSTANDSERIENNUMMER",
+        "dateNeu",
+        "dateBeauftragt",
+        "dateErfasst",
+        "dateAuftragsfaehig",
+        "dateAuftragsbestaetigt",
+        "dateDlErbracht",
+        "dateKommisioniert",
+        "dateAusgeliefert",
+        "dateAbgeschlossen"
+      ],
+      "bytes": 136691895
+    },
+    "DIENSTLEISTUNGEN": {
+      "file": "DIENSTLEISTUNGEN.csv",
+      "rows": 789616,
+      "expected_rows": 789616,
+      "columns": [
+        "DIENSTLEISTUNGSNR",
+        "DIENSTLEISTUNG",
+        "DIENSTLEISTUNGSTYP",
+        "HINZUGEFUEGT_AM",
+        "QUITTIERT_AM",
+        "UUID_KALIBRIERGEGENSTAND",
+        "AUFTRAGSPOSITION_UUID",
+        "GROESSE_TEIL",
+        "UUID_KALIBRIERUNG",
+        "ARTIKELNUMMER",
+        "KATALOGNUMMER",
+        "STATUS_DIENSTLESTUNG",
+        "AUFTRAGSNUMMER_SAP"
+      ],
+      "bytes": 222761294
+    },
+    "Ist_Stunden_24-26": {
+      "file": "Ist_Stunden_24-26.csv",
+      "rows": 10617,
+      "expected_rows": 10617,
+      "columns": [
+        "Kalendertag",
+        "KST",
+        "MESSRAUM",
+        "Kostenstelle",
+        "IST Sonstiges STD",
+        "IST Krank STD",
+        "IST Urlaub STD",
+        "IST Anwesend STD",
+        "IST-Stunden Gesamtergebnis  STD"
+      ],
+      "bytes": 774418
+    },
+    "KALIBRIERUNGEN": {
+      "file": "KALIBRIERUNGEN.csv",
+      "rows": 662287,
+      "expected_rows": 662287,
+      "columns": [
+        "AUFTRAGSNUMMER",
+        "KUNDENNUMMER_SAP",
+        "BEGINN",
+        "ENDE",
+        "BEWERTUNG",
+        "GERAETENUMMER",
+        "IDENTNUMMER",
+        "PROTOKOLLNUMMER",
+        "PRUEFUNGSART",
+        "MESSMITTEL_UUID",
+        "GROESSE",
+        "PRUEFINTERVALL",
+        "PRUEFINTERVALL_EINHEIT",
+        "MESSMITTELGRUPPE",
+        "MESSMITTELTYP",
+        "MESSRAUM"
+      ],
+      "bytes": 148469215
+    },
+    "Kunde_Branche": {
+      "file": "Kunde_Branche.csv",
+      "rows": 15468,
+      "expected_rows": 15468,
+      "columns": [
+        "KundenNr",
+        "Branche"
+      ],
+      "bytes": 438790
+    },
+    "MESSMITTEL": {
+      "file": "MESSMITTEL.csv",
+      "rows": 488699,
+      "expected_rows": 488699,
+      "columns": [
+        "MESSMITTEL_UUID",
+        "GERAETENUMMER",
+        "IDENTNUMMER",
+        "DATUM_LETZTE_PRUEFUNG",
+        "DATUM_NAECHSTE_PRUEFUNG",
+        "EINHEIT_PRUEFINTERVALL",
+        "PRUEFINTERVALL",
+        "KUNDENNUMMER_SAP",
+        "GROESSE",
+        "bezeichnung",
+        "DATUM_ERSTNUTZUNG_1",
+        "FAELLIGKEIT_TYP",
+        "FAELLIGKEIT_STOP",
+        "LETZTE_BEWERTUNG",
+        "MESSMITTELGRUPPE",
+        "MESSMITTELTYP",
+        "MESSRAUM"
+      ],
+      "bytes": 111826303
+    },
+    "Soll-Kapa": {
+      "file": "Soll-Kapa.csv",
+      "rows": 10358,
+      "expected_rows": 10358,
+      "columns": [
+        "Kalendertag (Intervall)",
+        "KST",
+        "MESSRAUM",
+        "Kostenstelle",
+        "SOLL Sonstiges STD",
+        "SOLL Krank STD",
+        "SOLL Urlaub STD",
+        "SOLL Anwesend STD",
+        "Gesamtergebnis STD"
+      ],
+      "bytes": 761198
+    }
+  }
+}

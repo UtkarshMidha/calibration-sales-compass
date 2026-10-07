@@ -12,7 +12,7 @@ const nf = (loc: string, opts: Intl.NumberFormatOptions) => new Intl.NumberForma
 export function euro(v: number, loc = "de-DE", approx = true, digits = 0): string {
   const s = nf(loc, {
     style: "currency",
-    currency: loc.startsWith("de") ? "EUR" : "GBP",
+    currency: "EUR",
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(v);

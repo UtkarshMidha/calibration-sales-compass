@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ChartColumn, ListChecks, Search, Settings, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ChartColumn, FileText, LayoutDashboard, ListChecks, Search, Settings, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getKunden, type Kunde } from "@/lib/data";
@@ -32,12 +32,19 @@ export function CommandPalette() {
 
   const rows = useMemo<Row[]>(() => {
     const query = q.trim().toLowerCase();
+    const isLeitung = app.user.role === "leitung";
     const pages: Row[] = [
-      { kind: "page", id: "p1", label: t("nav.heute"), hint: "/", href: "/", icon: ListChecks },
+      { kind: "page", id: "p0", label: t("nav.dashboard"), hint: "/", href: "/", icon: LayoutDashboard },
+      { kind: "page", id: "p1", label: t("nav.tagesliste"), hint: "/tagesliste", href: "/tagesliste", icon: ListChecks },
       { kind: "page", id: "p2", label: t("kunden.titel"), hint: "/kunden", href: "/kunden", icon: Users },
-      { kind: "page", id: "p3", label: t("cockpit.titel"), hint: "/cockpit", href: "/cockpit", icon: ChartColumn },
-      { kind: "page", id: "p4", label: t("modell.titel"), hint: "/modellguete", href: "/modellguete", icon: ShieldCheck },
-      { kind: "page", id: "p5", label: t("einst.titel"), hint: "/einstellungen", href: "/einstellungen", icon: Settings },
+      { kind: "page", id: "p3", label: t("nav.angebote"), hint: "/angebote", href: "/angebote", icon: FileText },
+      ...(isLeitung
+        ? [
+            { kind: "page" as const, id: "p4", label: t("cockpit.titel"), hint: "/cockpit", href: "/cockpit", icon: ChartColumn },
+            { kind: "page" as const, id: "p5", label: t("modell.titel"), hint: "/modellguete", href: "/modellguete", icon: ShieldCheck },
+            { kind: "page" as const, id: "p6", label: t("einst.titel"), hint: "/einstellungen", href: "/einstellungen", icon: Settings },
+          ]
+        : []),
     ];
 
     const actions: Row[] = [

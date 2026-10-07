@@ -1,0 +1,31 @@
+On dashboard the due date next six months should be more explanatory as of now the bars doesn't make any sense and the numbers below also doesn't make any sense so update it and make it more explanatory.
+
+
+The English and German toggle switch is not working accurately because sometimes if it is in English some terms are still in German so explicitly check for that in English everything should be in English and if not then convert in English and when it is in German everything should be in German if it is in English then convert in German so whatever language the user chooses nothing should be of another language converted into that language.
+
+The occurrence of the text CSV should be removed from the entire system UI because we do not want to explicitly tell that the data has been taken from CSV and real CSV snapshot or CSV every such occurrences from the UI should be removed.
+
+In daily list I can see 20 entries and recommendations but when I'm on some other tab example dashboard then I can see a count of 12 Let me know what is discount for and if it is not working as expected then fix it also and if it is working then explain in readme.
+
+In daily there are two sections the daily list on the left and then whatever company I select its page or section opens on the right so I want the functionality like the daily rest should be on the entire screen and when I click on some company then the daily list should minimize and the focus should go on to the company page which is currently on the right half of the section and once I'm done then there should be some option to expand the daily list and this particular company page should close so that user can focus on the important aspect one at a time rather than making a cluttered UI.
+
+As now the daily list and the company section on the daily list tab will be opening in full screen so I want you to revamp and structurize the UI of these two individually so that It is optimum and does not create any friction for users UI usecase.
+
+On the customer staff remove the CSV label and everything else looks good .
+
+In the instrument section only talk there are filters like all overdue partial churn due soon the problem is currently the count there is zero whereas the real data exist and I want you to fix that and also maybe remove thesource.Csv and reference date from the bottom because I do not want any CSV or clients or that reference date and maybe if needed revamp the UI so that it looks modern but at the same time is user friendly .
+
+Open the code section there is Dakks written maybe explain what it is like the full form or something in brackets so that the user is aware of it.
+
+In the cockpit show baseline seasonal life currently does not convey what it is used for so maybe have a tool tip or hover comment on it so that the user can understand what it is used for and also order volume by forecast So like currently it's just a graph but maybe somehow make it more understandable what does it actually mean so that the leadership can have a review on it.
+
+the data cards on the cockpit Such as revenue at risk by industry revenue at risk by region et cetera currently looks very outdated and are not self explanatory and these convey very poor information and the data should convey data storytelling rather than some random fact so convey it in such a way that it supports the data storytelling aspect so the user can look at it and understand what it is for why it is for and how is it helpful for the user.
+
+The Trust tab can be renamed as Developer tab where the developer can see the model and then we have M1 M2 M3 but maybe we remove M1 M2 M3 and then we can have something which is more explanatory and currently the numbers like 67.4 and 54.1 are static and also the graphs and values so maybe look at them why they are static. Also the data quality rules DQ1DQ3 and so on doesn't convey anything like what is this rule for Like what is the rule used for so maybe make it more explicit and explainable because currently we do not know what this rule is for so somehow remove the rule code and keep something which is more explanatory self explanatory rather than some jargons. also for assumptions maybe we can remove The ids and keep titles which are an important information rather than just spitting out jargons which makes no sense.
+
+Also in these settings maybe keep only things which are useful and keep some tool tip or hover instructions so that the things are self explanatory currently I it doesn't seem anything that is useful for the user because think it's from the sales team perspective what these settings can be for them because I do not see any potential for the sales teams perspective and it looks strange for them if needed maybe like rename and move these functionalities under some other new created tab And for the reference date maybe we can have more data because currently we only have two date.
+
+
+And also As we will be using the entire stuff so I don't think so the page mode is anyways useful so maybe remove that particular pitch mode. Also that "?" In the header next to pitch is also not required so remove that also.
+
+The search icon on the left have some Mac related stuff so remove that and also what are those black ticks and all so it's better to remove the black backslashes and options and put something which is meaningful and explanatory to the user.

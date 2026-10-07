@@ -55,15 +55,13 @@ export type MessmittelStatus =
 
 export interface User {
   id: string;
-  nameKey: "user.sabine" | "user.murat" | "user.julia" | "user.thomas";
+  nameKey: "user.sabine" | "user.thomas";
   role: "inside" | "leitung";
   kurz: string; // "S. Schneider"
 }
 
 export const USERS: User[] = [
   { id: "sabine", nameKey: "user.sabine", role: "inside", kurz: "S. Schneider" },
-  { id: "murat", nameKey: "user.murat", role: "inside", kurz: "M. Yılmaz" },
-  { id: "julia", nameKey: "user.julia", role: "inside", kurz: "J. Wagner" },
   { id: "thomas", nameKey: "user.thomas", role: "leitung", kurz: "T. Brandt" },
 ];
 
@@ -1266,8 +1264,7 @@ export function seedPitchState(): PitchState {
   const claims: PitchState["claims"] = {};
   const ergebnisse: PitchState["ergebnisse"] = {};
   const done: PitchState["done"] = {};
-  if (list[2]) claims[list[2].kundeId] = "murat";
-  if (list[5]) claims[list[5].kundeId] = "julia";
+  if (list[2]) claims[list[2].kundeId] = "sabine";
   if (list[8]) {
     done[list[8].kundeId] = "2026-09-25";
     ergebnisse[list[8].kundeId] = { code: "angebot", am: "2026-09-25", user: "sabine" };

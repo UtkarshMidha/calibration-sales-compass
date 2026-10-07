@@ -29,6 +29,7 @@ import {
   getZeitstrahl,
   type MessmittelStatus,
 } from "@/lib/data";
+import { useKundenIndex, useMessmittelSample } from "@/lib/real-data";
 import { date, euro, num, monthLabel } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
@@ -43,7 +44,7 @@ import {
   Zeitstrahl,
 } from "@/components/ui";
 
-const TABS = ["uebersicht", "aktivitaet", "messmittel", "prognose"] as const;
+const TABS = ["uebersicht", "messmittel", "historie"] as const;
 type Tab = (typeof TABS)[number];
 
 const STATUS_FILTERS: (MessmittelStatus | "alle")[] = ["alle", "ueberfaellig", "teilabwanderung", "faellig_bald", "ok", "nio", "gestoppt"];
@@ -61,17 +62,7 @@ export default function Kunde360Page() {
   const k = getKunde(params.kundeId);
 
   if (!k) {
-    return (
-      <div className="h-full grid place-items-center">
-        <EmptyState
-          title={lang === "de" ? "Kunde nicht gefunden" : "Customer not found"}
-          hint={`Kunde ${params.kundeId}`}
-          action={
-            <Btn onClick={() => router.push("/kunden")}>{t("kunden.titel")}</Btn>
-          }
-        />
-      </div>
-    );
+    return <RealKundeView kundeId={params.kundeId} />;
   }
 
   const emp = getEmpfehlungFuer(k.id, app.stichtag, app.settings);
@@ -206,7 +197,7 @@ export default function Kunde360Page() {
         </div>
       </div>
 
-      {/* ---------------- tabs ---------------- */}
+      {/* ---------------- tabs: 3 statt 4 — Historie bündelt Aktivität + Prognose + Lücken ---------------- */}
       <div className="flex items-center gap-1.5 mt-4 mb-3 border-b border-line pb-2">
         {TABS.map((tb) => (
           <button
@@ -219,13 +210,15 @@ export default function Kunde360Page() {
           >
             {tb === "uebersicht"
               ? t("k360.uebersicht")
-              : tb === "aktivitaet"
-                ? t("k360.aktivitaet")
-                : tb === "messmittel"
-                  ? t("k360.messmittelliste")
-                  : t("k360.prognose")}
+              : tb === "messmittel"
+                ? t("k360.messmittelliste")
+                : lang === "de" ? "Historie & Potenzial" : "History & potential"}
           </button>
         ))}
+        <div className="flex-1" />
+        <span className="hidden sm:block text-[11.5px] text-ink-3">
+          {lang === "de" ? "24 Monate Historie · 12 Monate Prognose" : "24 months history · 12 months forecast"}
+        </span>
       </div>
 
       {/* ---------------- Übersicht ---------------- */}
@@ -295,8 +288,8 @@ export default function Kunde360Page() {
         </div>
       )}
 
-      {/* ---------------- Aktivität ---------------- */}
-      {tab === "aktivitaet" && (
+      {/* ---------------- Historie & Potenzial (24M Historie + 12M Prognose gebündelt) ---------------- */}
+      {tab === "historie" && (
         <div className="space-y-4 anim-fade-up">
           <section className="card p-4">
             <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2 mb-1">{t("k360.historie")}</h3>
@@ -334,6 +327,8 @@ export default function Kunde360Page() {
               <LegendDot color="var(--color-violet)" label={t("k360.nioAnteil")} />
             </div>
           </section>
+
+          <KundenPrognoseView data={prognose} lang={lang} loc={loc} />
 
           <section className="grid sm:grid-cols-3 gap-3">
             <MiniStat
@@ -434,8 +429,8 @@ export default function Kunde360Page() {
         </div>
       )}
 
-      {/* ---------------- Prognose ---------------- */}
-      {tab === "prognose" && <KundenPrognoseView data={prognose} lang={lang} loc={loc} />}
+      {/* ---------------- Prognose (in Historie gebündelt) ---------------- */}
+      {tab === ("__prognose__" as Tab) && <KundenPrognoseView data={prognose} lang={lang} loc={loc} />}
     </div>
   );
 }
@@ -596,5 +591,127 @@ function ContactTimeline({ kundeId }: { kundeId: string }) {
       ))}
       {merged.length === 0 && <p className="text-[13px] text-ink-3">{t("k360.keineKontakte")}</p>}
     </ol>
+  );
+}
+
+/* Real snapshot view for genuine Kundennummern (kunden-index + messmittel-sample).
+ * Shown when the id is not part of the synthetic demo model. */
+function RealKundeView({ kundeId }: { kundeId: string }) {
+  const app = useApp();
+  const { t, lang } = useI18n();
+  const router = useRouter();
+  const loc = lang === "de" ? "de-DE" : "en-GB";
+  const { rows } = useKundenIndex();
+  const { rows: mm } = useMessmittelSample();
+
+  if (!rows) {
+    return (
+      <div className="h-full overflow-y-auto px-5 py-4">
+        <div className="card p-8 max-w-2xl mx-auto anim-fade-up">
+          <div className="h-6 w-48 rounded bg-surface-2 animate-pulse mb-3" />
+          <div className="h-4 w-full rounded bg-surface-2 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  const row = rows.find((r) => r.kunde === kundeId);
+  if (!row) {
+    return (
+      <div className="h-full grid place-items-center">
+        <EmptyState
+          title={lang === "de" ? "Kunde nicht gefunden" : "Customer not found"}
+          hint={`Kunde ${kundeId}`}
+          action={<Btn onClick={() => router.push("/kunden")}>{t("kunden.titel")}</Btn>}
+        />
+      </div>
+    );
+  }
+
+  const myMm = (mm ?? [])
+    .filter((r) => r.kunde === kundeId)
+    .sort((a, b) => a.faelligkeit.localeCompare(b.faelligkeit));
+
+  const copyMail = () => {
+    const text =
+      lang === "de"
+        ? `Sehr geehrte Damen und Herren,\n\nbei der Durchsicht Ihrer Messmittel ist uns aufgefallen, dass für ${row.ueberfaellig} Messmittel (Kunde ${row.kunde}, ${row.branche}) die Kalibrierung überfällig ist.\n\nDamit Ihre Prüfmittelüberwachung auditsicher bleibt, holen wir die Messmittel gerne bei Ihnen ab.\n\nDarf ich die Abholung für die kommende Woche einplanen?\n\nMit freundlichen Grüßen\n${t(app.user.nameKey)}`
+        : `Dear Sir or Madam,\n\nwe noticed that ${row.ueberfaellig} of your instruments (customer ${row.kunde}, ${row.branche}) are overdue.\n\nTo keep your equipment audit-proof we can collect the instruments.\n\nMay I schedule the pickup for next week?\n\nKind regards\n${t(app.user.nameKey)}`;
+    navigator.clipboard?.writeText(text).then(() => app.toast(lang === "de" ? "E-Mail-Text kopiert." : "Email text copied."));
+  };
+
+  return (
+    <div className="h-full overflow-y-auto px-5 py-4">
+      <div className="card overflow-hidden anim-fade-up max-w-[1100px] mx-auto">
+        <div className="px-5 pt-4 pb-3 border-b border-line">
+          <Link href="/kunden" className="inline-flex items-center gap-1 text-[12px] text-ink-3 hover:text-brand-700 font-semibold mb-1.5">
+            <ArrowLeft size={12} /> {t("kunden.titel")}
+          </Link>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-[20px] font-bold text-navy-800 leading-tight tnum">Kunde {row.kunde}</h2>
+            <span className="inline-flex items-center h-[18px] px-1.5 rounded border border-emerald-300 bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
+              CSV
+            </span>
+          </div>
+          <p className="text-[13px] text-ink-2 mt-0.5">{row.branche}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+            <Figure label={t("k360.aktiveMessmittel")} value={num(row.aktiv, 0, loc)} />
+            <Figure label={t("anlass.ueberfaellig")} value={num(row.ueberfaellig, 0, loc)} tone={row.ueberfaellig > 0 ? "overdue" : undefined} />
+            <Figure label={lang === "de" ? "Fällig (30 Tage)" : "Due (30 days)"} value={num(row.due30, 0, loc)} />
+            <Figure label={t("k360.letzteKal")} value={row.letzteKal ? date(row.letzteKal, loc) : "–"} />
+          </div>
+        </div>
+        <div className="px-4 py-2.5 bg-surface-1 flex items-center gap-1.5 flex-wrap">
+          <Btn variant="secondary" onClick={copyMail}>
+            <Mail size={14} /> {t("akt.email")}
+          </Btn>
+          <span className="text-[11.5px] text-ink-3">
+            {lang === "de"
+              ? "Echte Zähldaten aus dem Snapshot – Namen und Kontakte sind nicht im Datensatz."
+              : "Real counts from the snapshot – names and contacts are not in the dataset."}
+          </span>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden mt-4 max-w-[1100px] mx-auto">
+        <div className="px-4 pt-3.5 pb-2 flex items-center justify-between">
+          <h3 className="text-[13px] font-bold uppercase tracking-[0.09em] text-ink-2">
+            {t("k360.messmittelliste")} <span className="tnum text-ink-3">({myMm.length}{myMm.length >= 40 ? "+" : ""})</span>
+          </h3>
+        </div>
+        {myMm.length === 0 ? (
+          <p className="px-4 pb-4 text-[13px] text-ink-3">
+            {lang === "de" ? "Keine Sample-Zeilen für diesen Kunden im Snapshot-Auszug." : "No sample rows for this customer in the snapshot extract."}
+          </p>
+        ) : (
+          <div className="overflow-x-auto max-h-[52vh]">
+            <table className="w-full text-[12.5px] min-w-[680px]">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-surface-1 border-b border-line text-[10.5px] uppercase tracking-wider text-ink-3">
+                  <th className="text-left font-bold px-4 py-2">{t("k360.spalten.ident")}</th>
+                  <th className="text-left font-bold px-3 py-2">{t("k360.spalten.gruppe")}</th>
+                  <th className="text-left font-bold px-3 py-2">{t("k360.spalten.faelligkeit")}</th>
+                  <th className="text-right font-bold px-4 py-2">{t("k360.spalten.status")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-line)]">
+                {myMm.slice(0, 200).map((r, i) => (
+                  <tr key={`${r.ident}-${i}`} className="hover:bg-surface-1">
+                    <td className="px-4 py-1.5 tnum text-ink-2">{r.ident || "–"}</td>
+                    <td className="px-3 py-1.5 text-ink">{r.gruppe} <span className="text-ink-3">· {r.typ.slice(0, 42)}</span></td>
+                    <td className={clsx("px-3 py-1.5 tnum", r.tage > 0 ? "text-overdue font-semibold" : "text-ink-2")}>
+                      {date(r.faelligkeit, loc)} <span className="text-ink-3">({r.tage > 0 ? `+${r.tage}` : r.tage} d)</span>
+                    </td>
+                    <td className="px-4 py-1.5 text-right">
+                      <StatusPill status={r.status === "teilabwanderung" ? "teilabwanderung" : r.status === "faellig_bald" ? "faellig_bald" : "ueberfaellig"} lang={lang} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
