@@ -1,0 +1,321 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ *  PeCal Kompass — design tokens
+ *  Metrology aesthetic: precise lines, tabular numbers, calm surfaces,
+ *  navy shell + Perschmann orange used surgically.
+ * ------------------------------------------------------------------ */
+@theme {
+  --font-sans: "Roboto Flex", "Roboto", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* navy shell */
+  --color-navy-950: #07131d;
+  --color-navy-900: #0b1e2c;
+  --color-navy-850: #10293a;
+  --color-navy-800: #1c3b51;
+  --color-navy-700: #27506c;
+  --color-navy-600: #356a8c;
+
+  /* brand */
+  --color-brand: #ff7000;
+  --color-brand-600: #e85f00;
+  --color-brand-700: #b84e00;
+  --color-brand-100: #ffe7d4;
+  --color-brand-50: #fff4ea;
+
+  /* blue (links, forecast) */
+  --color-azure: #3b9ee3;
+  --color-azure-800: #105280;
+  --color-azure-100: #e3f1fc;
+
+  /* surfaces */
+  --color-surface-0: #ffffff;
+  --color-surface-1: #f7f9fb;
+  --color-surface-2: #eef3f7;
+  --color-surface-3: #e4edf3;
+  --color-line: #dce3ea;
+  --color-line-strong: #c6d1db;
+
+  /* text */
+  --color-ink: #2e3031;
+  --color-ink-2: #4a4949;
+  --color-ink-3: #6d7378;
+  --color-ink-inv: #f2f6f9;
+
+  /* status (always paired with icon + label) */
+  --color-ok: #2f9e6e;
+  --color-due: #b97a00;
+  --color-overdue: #d9480f;
+  --color-critical: #c92a2a;
+  --color-violet: #7048e8;
+
+  --shadow-lift: 0 1px 2px rgb(16 41 58 / 0.06), 0 6px 16px -6px rgb(16 41 58 / 0.14);
+  --shadow-pop: 0 2px 6px rgb(16 41 58 / 0.08), 0 18px 44px -12px rgb(16 41 58 / 0.28);
+}
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  border-color: var(--color-line);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-surface-1);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- helpers ---------- */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+}
+
+.hairline {
+  border: 1px solid var(--color-line);
+}
+
+.card {
+  background: var(--color-surface-0);
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 5px;
+  border: 1px solid var(--color-line-strong);
+  border-bottom-width: 2px;
+  background: var(--color-surface-0);
+  color: var(--color-ink-3);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: radial-gradient(circle at 18% 12%, rgb(255 112 0 / 0.16), transparent 42%),
+    radial-gradient(circle at 82% 90%, rgb(59 158 227 / 0.14), transparent 46%);
+}
+
+/* scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-3);
+  background-clip: content-box;
+}
+
+/* ---------- animations ---------- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes row-out {
+  to {
+    opacity: 0;
+    transform: translateX(18px) scale(0.985);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.01);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.anim-fade-up {
+  animation: fade-up 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.anim-fade-in {
+  animation: fade-in 0.18s ease-out both;
+}
+.anim-slide-in {
+  animation: slide-in-right 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.anim-row-out {
+  animation: row-out 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.anim-pop {
+  animation: bounce-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > * {
+  animation: fade-up 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.01s; }
+.stagger > *:nth-child(2) { animation-delay: 0.03s; }
+.stagger > *:nth-child(3) { animation-delay: 0.05s; }
+.stagger > *:nth-child(4) { animation-delay: 0.07s; }
+.stagger > *:nth-child(5) { animation-delay: 0.09s; }
+.stagger > *:nth-child(6) { animation-delay: 0.11s; }
+.stagger > *:nth-child(7) { animation-delay: 0.13s; }
+.stagger > *:nth-child(8) { animation-delay: 0.15s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---------- recharts tuning ---------- */
+.recharts-cartesian-axis-tick text {
+  fill: var(--color-ink-3);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+.recharts-surface {
+  overflow: visible;
+}
+
+/* ---------- print (Angebotsentwurf, DIN 5008-ish) ---------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 20mm 20mm 22mm 25mm;
+  }
+  body {
+    background: #fff !important;
+    font-size: 11px;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-root {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: auto !important;
+  }
+  .print-watermark {
+    position: fixed !important;
+    inset: auto !important;
+    top: 42% !important;
+    left: 8% !important;
+    font-size: 54pt !important;
+    opacity: 0.08 !important;
+    transform: rotate(-24deg) !important;
+    z-index: 999 !important;
+    color: #000 !important;
+    white-space: nowrap !important;
+  }
+  .print-break {
+    break-before: page;
+  }
+  tr,
+  .keep {
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+}
