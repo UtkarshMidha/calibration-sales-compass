@@ -29,10 +29,22 @@ Weitere Skripte:
 - **Modellgüte-Werte sind statisch eingebettet** (Holdout-Messung 06.10.2026); jeder Pipeline-Lauf berechnet sie neu.
 - **Stichtage:** 25.09.2026 und 25.03.2026 (Rückblick). Weitere folgen mit dem nächsten Datenlauf.
 
+## Challenge-Abdeckung
+
+| Vorgabe | Antwort im Produkt |
+|---|---|
+| Künftigen Kalibrierbedarf vorhersagen | Dashboard Fälligkeits-Balken (6 Monate), Tagesliste „Fällig demnächst", Kunde-360 Zeitstrahl, Verlauf → Potenzial → Fällig demnächst |
+| Aktivität & Abwanderungsrisiko erkennen | Verlauf → Stilllegung (18M-Kurve + Details je Monat), Churn-KPI, Kunde-360 Risiko-Gauge, Tagesliste „Abwanderungsrisiko" |
+| Auftragsvolumen prognostizieren | Cockpit-Prognose mit 80-%-Band (Leitung), Verlauf → Aktivität (Historie als Basis) |
+| Nach Umsatzpotenzial priorisieren | Erwarteter Wert (€) in Tagesliste und Dashboard-Top-8 |
+| Branchen-Portfolios vergleichen | Verlauf → Potenzial → Branchenlücken (Peer-Vergleich ≥ 40 %), Kunde-360 Lückenmatrix |
+| Täglich „wen und warum" | Tagesliste mit Begründung, Warum-Aufschlüsselung und Aktionen (Übernehmen, Anruf, E-Mail, Angebot, Erledigt) |
+
 ## Screens
 
 - **Dashboard** (`/`) — echte Kennzahlen (Stand 25.09.2026), Top-Empfehlungen nach €-Wert, Umsatzpotenzial-Donut, Fälligkeits-Balken (6 Monate), KI-Assistent-Overlay, Schnellaktionen, Top-Branchen.
-- **Tagesliste** (`/tagesliste`) — priorisierte Modell-Empfehlungen (Länge = Einstellung, Standard 12), Suche + Anlass-/Prioritätsfilter, Ergebnis-Erfassung; Klick/Enter öffnet die Fokus-Ansicht (ein Kunde, vollflächig, Esc/zurück zur Liste).
+- **Tagesliste** (`/tagesliste`) — priorisierte Modell-Empfehlungen (Länge = Einstellung, Standard 12), Suche + Anlass-/Prioritätsfilter, Ergebnis-Erfassung; Klick/Enter öffnet die Fokus-Ansicht (ein Kunde, vollflächig, Esc/zurück zur Liste). Tabs **Offen/Erledigt**: Erledigte (inkl. Wiedervorlagen) bleiben mit Ergebnis sichtbar, einzeln zurückholbar; **Demo zurücksetzen** im Erledigt-Tab löscht Arbeitsstand (Claims, Ergebnisse, Entwürfe, Lernwerte) für einen frischen POC-Durchlauf — ein npm-Befehl kann kein Browser-localStorage löschen, daher dieser Knopf statt Skript.
+- **Verlauf** (`/verlauf`) — Abwanderung bisher (18M-Kurve, Monat anklickbar mit Kunden-Details) und Potenzialkunden (fällig demnächst, ohne Portal, Branchenlücken aus Peer-Vergleich).
 - **Kunden** (`/kunden`) — echte Kundennummern/Branchen durchsuch-/filterbar, tief verlinkbar.
 - **Kunde-360** (`/kunden/[kundeId]`) — Modellkunden: Risiko-Gauge, Zeitstrahl, Lückenmatrix, 24M-Historie, Messmittelliste mit Export, 12M-Prognose, Kontaktverlauf; echte Kundennummern: kompakte Zähldaten + Messmittel-Auszug.
 - **Messmittel** (`/messmittel`) — Auszug der ältesten Fälligkeiten mit Statusfiltern (mit Erklärung per Hover).

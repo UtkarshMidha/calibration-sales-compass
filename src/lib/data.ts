@@ -903,6 +903,8 @@ export function getAktivitaet(kundeId: string, stichtag: Stichtag = "2026-09-25"
 export interface PrognoseMonat {
   monat: string;
   historie: boolean;
+  /** Teildaten-Monat (Datensatz endet am 24.09.2026) – nicht als volle Historie plotten. */
+  partial?: boolean;
   kalibrierungen: number;
   stunden: number;
   p10: number;
@@ -931,13 +933,15 @@ export function getPrognoseGesamt(stichtag: Stichtag = "2026-09-25"): PrognoseMo
     if (!hist) {
       kal = Math.round(21400 * saison * jahresTrend * (0.97 + 0.06 * r()));
     }
-    if (key === "2026-09") kal = 10_147; // partial month (DQ-9)
+    if (key === "2026-09") kal = 10_147; // partial month (DQ-9) – als Teildaten markiert
+    const partial = key === "2026-09";
 
     const stunden = Math.round(kal * 0.18);
     const unc = hist ? 0 : 0.09 + 0.012 * (i - 23);
     out.push({
       monat: key,
       historie: hist,
+      ...(partial ? { partial: true as const } : {}),
       kalibrierungen: kal,
       stunden,
       p10: Math.round(kal * (1 - unc)),

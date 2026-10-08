@@ -58,6 +58,31 @@ export interface RealKundenRow {
   letzteKal: string | null;
 }
 
+export interface VerlaufTop {
+  kunde: string;
+  branche: string;
+  letzteKal: string | null;
+  ueberfaellig: number;
+  volumen6m: number;
+  wert: number;
+}
+
+export interface VerlaufMonat {
+  monat: string;
+  kalibrierungen: number;
+  aktiveKunden: number;
+  neuStill: number;
+  stillKumuliert: number;
+  stillWert: number;
+  top: VerlaufTop[];
+}
+
+export interface Potenzial {
+  kommend: { kunde: string; branche: string; due30: number; aktiv: number; letzteKal: string | null; wert: number }[];
+  portal: { kunde: string; branche: string; auftraege12m: number; aktiv: number; wert: number }[];
+  luecken: { kunde: string; branche: string; gruppe: string; peerPct: number; erwartet: number; wert: number }[];
+}
+
 export interface RealMessmittelRow {
   kunde: string;
   ident: string;
@@ -121,4 +146,32 @@ export function useMessmittelSample(): { rows: RealMessmittelRow[] | null } {
     };
   }, []);
   return { rows };
+}
+
+export function useVerlauf(): { monate: VerlaufMonat[] | null } {
+  const [monate, setMonate] = useState<VerlaufMonat[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetchJson<{ monate: VerlaufMonat[] }>("/data/verlauf.json").then((d) => {
+      if (live && d) setMonate(d.monate);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return { monate };
+}
+
+export function usePotenzial(): { data: Potenzial | null } {
+  const [data, setData] = useState<Potenzial | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetchJson<Potenzial>("/data/potenzial.json").then((d) => {
+      if (live && d) setData(d);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return { data };
 }

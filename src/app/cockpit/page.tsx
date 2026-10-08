@@ -1,10 +1,11 @@
 "use client";
-
 import clsx from "clsx";
-import { AlertTriangle, Calendar, ChartLine, ChevronRight, TrendingDown } from "lucide-react";
+import { AlertTriangle, ArrowRight, Calendar, ChartLine, ChevronRight, TrendingDown } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import {
+  ANLASS_ERFOLGSCHANCE,
   HEADLINE,
   USERS,
   getCockpitAggregates,
@@ -18,20 +19,13 @@ import { euro, num, pct } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import { Card, Sparkline } from "@/components/ui";
-
 const GRADIENT_BRANCHE = "linear-gradient(90deg, var(--color-brand-700), var(--color-brand))";
-const GRADIENT_GEBIET = "linear-gradient(90deg, var(--color-navy-700), var(--color-navy-600))";
-const GRADIENT_TEAM = "linear-gradient(90deg, var(--color-navy-700), var(--color-navy-600))";
-const GRADIENT_DONE = "linear-gradient(90deg, #1c6e4a, var(--color-ok))";
-const GRADIENT_RESULT = "linear-gradient(90deg, var(--color-brand-700), var(--color-brand))";
-const GRADIENT_LOSS = "linear-gradient(90deg, var(--color-navy-700), var(--color-navy-600))";
-
+const OUTCOME_COLORS = ["#10b981", "#2563eb", "#94a3b8", "#f59e0b", "#8b5cf6", "#64748b", "#cbd5e1"];
 export default function CockpitPage() {
   const app = useApp();
   const { t, lang } = useI18n();
   const loc = lang === "de" ? "de-DE" : "en-GB";
   const [showBaseline, setShowBaseline] = useState(false);
-
   if (app.user.role !== "leitung") {
     return (
       <div className="h-full overflow-y-auto px-5 py-4">
@@ -56,16 +50,13 @@ export default function CockpitPage() {
       </div>
     );
   }
-
   const agg = getCockpitAggregates();
-
   const prognose = getPrognoseGesamt(app.stichtag);
   const f12 = prognose.filter((d) => !d.historie);
   const fTotal = f12.reduce((s, d) => s + d.kalibrierungen, 0);
   const fPeak = f12.reduce((a, b) => (b.kalibrierungen > a.kalibrierungen ? b : a), f12[0]);
   const fLast = f12[f12.length - 1];
   const fBandPct = fLast ? Math.round(((fLast.p90 - fLast.p10) / Math.max(1, fLast.kalibrierungen)) * 50) : 0;
-
   const kpis = [
     {
       label: t("cockpit.kpi.faellig3m"),
@@ -96,7 +87,6 @@ export default function CockpitPage() {
       icon: AlertTriangle,
     },
   ];
-
   return (
     <div className="h-full overflow-y-auto px-5 py-4">
       {/* ---------------- intro ---------------- */}
@@ -115,7 +105,6 @@ export default function CockpitPage() {
           <span className="tnum font-semibold text-navy-800">{app.stichtag}</span>
         </span>
       </div>
-
       {/* ---------------- KPIs ---------------- */}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 stagger mb-3">
         {kpis.map((k) => {
@@ -136,7 +125,6 @@ export default function CockpitPage() {
           );
         })}
       </div>
-
       {/* ---------------- forecast ---------------- */}
       <Card
         className="mb-3 anim-fade-up"
@@ -217,74 +205,65 @@ export default function CockpitPage() {
             }
           >
             {lang === "de"
-              ? "Was ist die Baseline? Hovern für Erklärung – sie zeigt, ob das Modell besser ist als „wie letztes Jahr“."
-              : "What is the baseline? Hover for an explanation – it shows whether the model beats “like last year”."}
+              ? "Die Baseline zeigt, ob das Modell besser ist als „wie letztes Jahr“."
+              : "The baseline shows whether the model beats “like last year”."}
           </p>
         </div>
       </Card>
-
-      {/* ---------------- risk by branche / gebiet ---------------- */}
+      {/* ---------------- risk: lollipop (Branche) + tiles (Gebiet) ---------------- */}
       <div className="grid gap-3 lg:grid-cols-2 mb-3">
-        <RiskBars
+        <RiskLolli
           title={t("cockpit.atRiskBranche")}
           rows={agg.byBranche}
           hrefQuery="branche"
-          gradient={GRADIENT_BRANCHE}
           loc={loc}
           hint={lang === "de" ? "Klick filtert die Kundenliste nach dieser Branche." : "Click filters the customer list by this industry."}
         />
-        <RiskBars
+        <RiskTiles
           title={t("cockpit.atRiskGebiet")}
           rows={agg.byGebiet}
           hrefQuery="gebiet"
-          gradient={GRADIENT_GEBIET}
           loc={loc}
           hint={lang === "de" ? "Klick filtert die Kundenliste nach diesem Gebiet." : "Click filters the customer list by this region."}
         />
       </div>
-
-      {/* ---------------- team ---------------- */}
+      {/* ---------------- funnel + bullets ---------------- */}
       <div className="grid gap-3 lg:grid-cols-2 mb-3">
-        <TeamCard />
-        <ErfolgsquoteCard loc={loc} />
+        <TeamFunnel />
+        <ErfolgsBullet loc={loc} />
       </div>
-
-      {/* ---------------- results & losses ---------------- */}
+      {/* ---------------- donut + losses ---------------- */}
       <div className="grid gap-3 md:grid-cols-2">
-        <VerteilungCard
-          title={lang === "de" ? "Ergebnisverteilung" : "Outcome distribution"}
-          hint={lang === "de" ? "Protokollierte Ergebnisse der Empfehlungen." : "Outcomes logged on the recommendations."}
-          rows={getErgebnisVerteilung().map((r) => ({
-            key: t(`ergebnis.${r.key}` as "ergebnis.angebot"),
-            n: r.n,
-          }))}
-          gradient={GRADIENT_RESULT}
-        />
-        <VerteilungCard
-          title={t("cockpit.verlust")}
-          hint={lang === "de" ? "Abwanderungen: wer den Auftrag bekommen hat." : "Churn: who won the order."}
-          rows={getVerlust().map((r) => ({ key: r.key, n: r.n }))}
-          gradient={GRADIENT_LOSS}
-        />
+        <OutcomeDonut loc={loc} />
+        <LossLolli loc={loc} />
       </div>
     </div>
   );
 }
-
-/* ============================== sub-components ============================== */
-
-function RiskBars({
+/* ============================== sub-components ==============================
+ * Modern storytelling set: lollipop ranking, tile grid (for near-equal
+ * values), conversion funnel, bullet-vs-target rows, donut, loss lollipops.
+ * ========================================================================== */
+function StoryTakeaway({ text }: { text: string }) {
+  const { lang } = useI18n();
+  return (
+    <p className="px-4 pt-0.5 pb-2.5 text-[12.5px] leading-relaxed text-ink-2 border-b border-line mb-2.5">
+      <strong className="text-navy-800">{lang === "de" ? "Fazit: " : "Takeaway: "}</strong>
+      {text}
+    </p>
+  );
+}
+/* ---- lollipop ranking: dot + track, staggered grow, click filters ---- */
+function RiskLolli({
   title,
   rows,
   hrefQuery,
-  gradient,
   loc,
   hint,
 }: {
   title: string;
   rows: { key: string; wert: number }[];
   hrefQuery: "branche" | "gebiet";
-  gradient: string;
   loc: string;
   hint?: string;
 }) {
@@ -293,123 +272,212 @@ function RiskBars({
   const top = rows[0];
   const topPct = Math.round((top.wert / total) * 100);
   const { lang } = useI18n();
-  const story =
-    lang === "de"
-      ? `${top.key} trägt ${topPct} % des gefährdeten Umsatzes (${euro(top.wert, loc)}) – dort zuerst gegensteuern, dann der Reihe nach abarbeiten.`
-      : `${top.key} carries ${topPct} % of revenue at risk (${euro(top.wert, loc)}) – countersteer there first, then work down the list.`;
   return (
     <Card className="anim-fade-up" title={title} hint={hint}>
-      <p className="px-4 pt-0.5 pb-2 text-[12.5px] leading-relaxed text-ink-2 border-b border-line mb-2">
-        <strong className="text-navy-800">{lang === "de" ? "Fazit: " : "Takeaway: "}</strong>
-        {story}
-      </p>
-      <div className="px-4 pb-4 pt-0.5 space-y-0.5">
-        {rows.map((r) => (
-          <Link
-            key={r.key}
-            href={`/kunden?${hrefQuery}=${encodeURIComponent(r.key)}`}
-            className="group flex items-center gap-3 px-2 -mx-2 py-[5px] rounded-[7px] hover:bg-surface-1 transition-colors"
-          >
-            <span className="w-[38%] shrink-0 text-[12.5px] text-ink truncate group-hover:text-brand-700">{r.key}</span>
-            <span className="flex-1 min-w-[40px] h-[8px] rounded-full bg-surface-2 overflow-hidden">
-              <span
-                className="block h-full rounded-full"
-                style={{ width: `${(r.wert / max) * 100}%`, background: gradient }}
-              />
-            </span>
-            <span className="tnum text-[11.5px] font-semibold text-navy-800 min-w-[104px] text-right shrink-0 whitespace-nowrap">
-              {euro(r.wert, loc)}
-            </span>
-            <ChevronRight
-              size={13}
-              className="shrink-0 text-ink-3 opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </Link>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-function MiniBar({
-  label,
-  value,
-  max,
-  gradient,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  gradient: string;
-}) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="w-[86px] shrink-0 text-[11.5px] text-ink-3 truncate">{label}</span>
-      <span className="flex-1 min-w-[30px] h-[7px] rounded-full bg-surface-2 overflow-hidden">
-        <span
-          className="block h-full rounded-full"
-          style={{ width: `${Math.max(2, (value / Math.max(max, 1)) * 100)}%`, background: gradient }}
-        />
-      </span>
-      <span className="tnum text-[12px] font-semibold text-navy-800 min-w-[26px] text-right shrink-0">{value}</span>
-    </div>
-  );
-}
-
-function TeamCard() {
-  const { t } = useI18n();
-  const team = getTeam();
-  const max = Math.max(...team.map((m) => Math.max(m.uebernommen, m.erledigt)), 1);
-
-  return (
-    <Card className="anim-fade-up" title={t("cockpit.team")} hint={t("cockpit.teamHint")}>
-      <div className="px-4 pb-4 pt-1">
-        {team.map((m, i) => {
-          const u = USERS.find((x) => x.id === m.userId);
+      <StoryTakeaway
+        text={
+          lang === "de"
+            ? `${top.key} trägt ${topPct} % des gefährdeten Umsatzes (${euro(top.wert, loc)}) – dort zuerst gegensteuern.`
+            : `${top.key} carries ${topPct} % of revenue at risk (${euro(top.wert, loc)}) – countersteer there first.`
+        }
+      />
+      <div className="px-3 pb-3.5 space-y-0.5">
+        {rows.map((r, i) => {
+          const share = Math.round((r.wert / total) * 100);
           return (
-            <div
-              key={m.userId}
-              className={clsx("py-2.5", i > 0 && "border-t border-line", i === 0 && "pt-1", i === team.length - 1 && "pb-0")}
+            <Link
+              key={r.key}
+              href={`/kunden?${hrefQuery}=${encodeURIComponent(r.key)}`}
+              className="group flex items-center gap-2.5 px-2 py-[5px] rounded-[9px] hover:bg-blue-50/60 transition-colors"
             >
-              <p className="text-[13px] font-semibold text-ink truncate mb-1.5">{u ? t(u.nameKey) : m.userId}</p>
-              <MiniBar label={t("cockpit.uebernommen")} value={m.uebernommen} max={max} gradient={GRADIENT_TEAM} />
-              <div className="h-1.5" />
-              <MiniBar label={t("cockpit.erledigt")} value={m.erledigt} max={max} gradient={GRADIENT_DONE} />
-            </div>
+              <span className="tnum text-[10.5px] font-bold text-slate-300 w-5 shrink-0 text-right">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="w-[34%] shrink-0 text-[12.5px] font-medium text-ink truncate group-hover:text-[#2563eb] transition-colors">
+                {r.key}
+              </span>
+              <span className="flex-1 min-w-[40px] h-[7px] rounded-full bg-slate-100 relative">
+                <span
+                  className="anim-grow-x absolute inset-y-0 left-0 rounded-full"
+                  style={{ width: `${Math.max(3, (r.wert / max) * 100)}%`, background: GRADIENT_BRANCHE, animationDelay: `${Math.min(i * 45, 500)}ms` }}
+                />
+                <span
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full ring-2 ring-white shadow anim-fade-in"
+                  style={{ left: `${Math.max(3, (r.wert / max) * 100)}%`, background: "#b84e00", animationDelay: `${300 + Math.min(i * 45, 500)}ms` }}
+                />
+              </span>
+              <span className="tnum text-[11.5px] font-bold text-navy-800 min-w-[92px] text-right shrink-0 whitespace-nowrap">
+                {euro(r.wert, loc)}
+              </span>
+              <span className="tnum text-[10.5px] font-bold text-white bg-slate-400 rounded-md px-1.5 py-px shrink-0">
+                {share < 1 ? "< 1" : share} %
+              </span>
+              <ChevronRight size={13} className="shrink-0 -ml-1 text-ink-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </Link>
           );
         })}
       </div>
     </Card>
   );
 }
-
-function ErfolgsquoteCard({ loc }: { loc: string }) {
-  const { t } = useI18n();
-  const rows = getErfolgsquote();
-
+/* ---- tile grid: honest when values are near-equal (bars would all look full) ---- */
+function RiskTiles({
+  title,
+  rows,
+  hrefQuery,
+  loc,
+  hint,
+}: {
+  title: string;
+  rows: { key: string; wert: number }[];
+  hrefQuery: "branche" | "gebiet";
+  loc: string;
+  hint?: string;
+}) {
+  const { lang, t } = useI18n();
+  const max = Math.max(...rows.map((r) => r.wert), 1);
+  const total = rows.reduce((s, r) => s + r.wert, 0) || 1;
+  const spread = Math.round(((max - rows[rows.length - 1].wert) / max) * 100);
   return (
-    <Card className="anim-fade-up" title={t("cockpit.erfolgsquote")}>
-      <div className="px-4 pb-4 pt-0.5 space-y-2.5">
-        {rows.map((r) => {
+    <Card
+      className="anim-fade-up"
+      title={title}
+      hint={hint}
+      actions={
+        <Link href="/kunden" className="inline-flex items-center gap-1 text-[12px] font-bold text-[#2563eb] hover:underline">
+          {lang === "de" ? "Alle Kunden" : "All customers"} <ArrowRight size={12} />
+        </Link>
+      }
+    >
+      <p className="px-4 pt-0.5 pb-2.5 text-[12.5px] leading-relaxed text-ink-2 border-b border-line mb-3">
+        <strong className="text-navy-800">{lang === "de" ? "Fazit: " : "Takeaway: "}</strong>
+        {lang === "de"
+          ? `Ausgeglichen – nur ${spread} % zwischen stärkstem und schwächstem Gebiet. Kein Hotspot, überall dranbleiben.`
+          : `Balanced – only ${spread} % between strongest and weakest region. No hotspot, stay on all of them.`}
+      </p>
+      <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {rows.map((r, i) => {
+          const share = Math.round((r.wert / total) * 100);
+          return (
+            <Link
+              key={r.key}
+              href={`/kunden?${hrefQuery}=${encodeURIComponent(r.key)}`}
+              className="group rounded-xl border border-line bg-surface-0 hover:border-[#2563eb] hover:shadow-[0_8px_20px_-12px_rgba(37,99,235,.5)] transition-all p-3 anim-fade-up"
+              style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}
+            >
+              <p className="text-[12px] font-bold text-ink truncate group-hover:text-[#2563eb]">{r.key}</p>
+              <p className="tnum text-[16px] font-extrabold text-navy-800 tracking-tight mt-0.5">
+                {(r.wert / 1_000_000).toLocaleString(loc, { maximumFractionDigits: 2 })} {lang === "de" ? "Mio. €" : "m €"}
+              </p>
+              <div className="h-[5px] rounded-full bg-slate-100 overflow-hidden mt-1.5">
+                <div
+                  className="anim-grow-x h-full rounded-full bg-gradient-to-r from-[#1c3b51] to-[#3b9ee3]"
+                  style={{ width: `${(r.wert / max) * 100}%`, animationDelay: `${200 + Math.min(i * 50, 300)}ms` }}
+                />
+              </div>
+              <p className="tnum text-[10.5px] mt-1 text-[#2563eb] font-bold">
+                {share} % {lang === "de" ? "des Risikos" : "of risk"} · {lang === "de" ? "Kunden ansehen" : "View customers"} →
+              </p>
+            </Link>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+/* ---- conversion funnel: übernommen → erledigt ---- */
+function TeamFunnel() {
+  const { t, lang } = useI18n();
+  const team = getTeam();
+  const totalClaimed = team.reduce((s, m) => s + m.uebernommen, 0) || 1;
+  const totalDone = team.reduce((s, m) => s + m.erledigt, 0);
+  const conv = Math.round((totalDone / totalClaimed) * 100);
+  return (
+    <Card className="anim-fade-up" title={t("cockpit.team")} hint={t("cockpit.teamHint")}>
+      <div className="px-4 pb-4 pt-1 space-y-4">
+        {team.map((m) => {
+          const u = USERS.find((x) => x.id === m.userId);
+          const c = Math.round((m.erledigt / Math.max(1, m.uebernommen)) * 100);
+          return (
+            <div key={m.userId}>
+              <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                <p className="text-[13px] font-bold text-ink truncate">{u ? t(u.nameKey) : m.userId}</p>
+                <p className="tnum text-[12px] font-extrabold text-navy-800 shrink-0">
+                  {c} % <span className="font-normal text-ink-3">{lang === "de" ? "weitergebracht" : "converted"}</span>
+                </p>
+              </div>
+              <div
+                className="h-[26px] rounded-[8px] bg-slate-100 flex overflow-hidden"
+                title={`${m.erledigt} ${lang === "de" ? "von" : "of"} ${m.uebernommen}`}
+              >
+                <div
+                  className="anim-grow-x h-full bg-gradient-to-r from-[#1c6e4a] to-[#2f9e6e] flex items-center px-2.5 text-white text-[11.5px] font-bold whitespace-nowrap overflow-hidden"
+                  style={{ width: `${(m.erledigt / Math.max(1, m.uebernommen)) * 100}%` }}
+                >
+                  {t("cockpit.erledigt")} · {m.erledigt}
+                </div>
+                <div className="flex-1 flex items-center px-2.5 text-[11.5px] font-semibold text-ink-3 whitespace-nowrap overflow-hidden">
+                  {t("cockpit.uebernommen")} · {m.uebernommen}
+                </div>
+              </div>
+              <p className="text-[11.5px] text-ink-3 mt-1 tnum">
+                {m.uebernommen - m.erledigt} {lang === "de" ? "noch offen" : "still open"}
+              </p>
+            </div>
+          );
+        })}
+        <p className="pt-1 border-t border-line text-[12px] text-ink-2 leading-relaxed">
+          {lang === "de"
+            ? `Team-Quote: ${conv} % aller übernommenen Empfehlungen sind erledigt.`
+            : `Team rate: ${conv} % of claimed recommendations are done.`}
+        </p>
+      </div>
+    </Card>
+  );
+}
+/* ---- bullet rows: gemessen vs. Startannahme (Tick) ---- */
+function ErfolgsBullet({ loc }: { loc: string }) {
+  const { t, lang } = useI18n();
+  const rows = getErfolgsquote();
+  return (
+    <Card
+      className="anim-fade-up"
+      title={t("cockpit.erfolgsquote")}
+      hint={lang === "de" ? "Balken = gemessen, Strich = Startannahme. Darüber = besser als gedacht." : "Bar = measured, tick = starting assumption. Above it = better than thought."}
+    >
+      <div className="px-4 pb-4 pt-0.5 space-y-3">
+        {rows.map((r, i) => {
           const quote = r.versuche > 0 ? r.erfolge / r.versuche : 0;
+          const prior = ANLASS_ERFOLGSCHANCE[r.anlass] ?? 0;
+          const win = quote >= prior;
           return (
             <div key={r.anlass}>
-              <div className="flex items-baseline justify-between gap-2 mb-1">
+              <div className="flex items-baseline justify-between gap-2">
                 <span className="text-[12.5px] text-ink font-medium truncate">
                   {t(`anlass.${r.anlass}` as "anlass.ueberfaellig")}
                 </span>
-                <span className="tnum text-[12px] font-bold text-navy-800 shrink-0">
+                <span className={`tnum text-[13px] font-extrabold shrink-0 ${win ? "text-[#1c6e4a]" : "text-[#b45309]"}`}>
                   {pct(quote, 0, loc)}
-                  <span className="text-ink-3 font-normal">
-                    {" "}
-                    ({r.erfolge}/{r.versuche})
-                  </span>
                 </span>
               </div>
-              <div className="h-[7px] rounded-full bg-surface-2 overflow-hidden">
+              <p className="tnum text-[11px] text-ink-3 mb-1">
+                {r.erfolge} {lang === "de" ? "von" : "of"} {r.versuche} {lang === "de" ? "Versuchen" : "tries"}
+                {" · "}
+                {lang === "de" ? "Annahme" : "Assumption"} {pct(prior, 0, loc)}
+              </p>
+              <div className="relative h-[9px] rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full"
-                  style={{ width: `${quote * 100}%`, background: GRADIENT_RESULT }}
+                  className="anim-grow-x absolute inset-y-0 left-0 rounded-full"
+                  style={{
+                    width: `${quote * 100}%`,
+                    background: win ? "linear-gradient(90deg,#1c6e4a,#2f9e6e)" : "linear-gradient(90deg,#b45309,#f59e0b)",
+                    animationDelay: `${Math.min(i * 60, 300)}ms`,
+                  }}
+                />
+                <span
+                  title={`${lang === "de" ? "Annahme" : "Assumption"}: ${pct(prior, 0, loc)}`}
+                  className="absolute top-[-3px] bottom-[-3px] w-[2.5px] rounded bg-navy-800"
+                  style={{ left: `calc(${prior * 100}% - 1px)` }}
                 />
               </div>
             </div>
@@ -419,32 +487,113 @@ function ErfolgsquoteCard({ loc }: { loc: string }) {
     </Card>
   );
 }
-
-function VerteilungCard({
-  title,
-  hint,
-  rows,
-  gradient,
-}: {
-  title: string;
-  hint?: string;
-  rows: { key: string; n: number }[];
-  gradient: string;
-}) {
-  const max = Math.max(...rows.map((r) => r.n), 1);
+/* ---- donut: Anteile auf einen Blick, Total in der Mitte ---- */
+function OutcomeDonut({ loc }: { loc: string }) {
+  const { t, lang } = useI18n();
+  const rows = getErgebnisVerteilung().map((r) => ({ key: t(`ergebnis.${r.key}` as "ergebnis.angebot"), n: r.n }));
+  const total = rows.reduce((s, r) => s + r.n, 0) || 1;
+  const data = rows.map((r) => ({ name: r.key, value: r.n }));
+  const [hover, setHover] = useState(false);
   return (
-    <Card className="anim-fade-up" title={title} hint={hint}>
-      <div className="px-4 pb-4 pt-0.5 space-y-2">
-        {rows.map((r) => (
+    <Card
+      className="anim-fade-up"
+      title={lang === "de" ? "Ergebnisverteilung" : "Outcome distribution"}
+      hint={lang === "de" ? "Protokollierte Ergebnisse der Empfehlungen." : "Outcomes logged on the recommendations."}
+    >
+      <div className="px-4 pb-4">
+        <div
+          className="h-[168px] relative"
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={52}
+                outerRadius={74}
+                paddingAngle={2.5}
+                stroke="#fff"
+                strokeWidth={2}
+                isAnimationActive
+                animationDuration={800}
+              >
+                {data.map((_, i) => (
+                  <Cell key={i} fill={OUTCOME_COLORS[i % OUTCOME_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={(p: unknown) => {
+                  const { active, payload } = p as { active?: boolean; payload?: { name?: string; value?: unknown }[] };
+                  if (!active || !payload || payload.length === 0) return null;
+                  return (
+                    <div className="chart-tip">
+                      <p className="font-bold">{payload[0].name}</p>
+                      <p className="tnum">{num(Number(payload[0].value ?? 0), 0, loc)}</p>
+                    </div>
+                  );
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div
+          className="absolute inset-0 grid place-items-center pointer-events-none transition-opacity duration-200"
+          style={{ opacity: hover ? 0 : 1 }}
+        >
+            <div className="text-center">
+              <p className="tnum text-[22px] font-extrabold text-navy-800 leading-none">{num(total, 0, loc)}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3 mt-0.5">
+                {lang === "de" ? "Ergebnisse" : "Outcomes"}
+              </p>
+            </div>
+          </div>
+        </div>
+        <ul className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+          {rows.map((r, i) => (
+            <li key={r.key} className="flex items-center gap-1.5 text-[11.5px] min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: OUTCOME_COLORS[i % OUTCOME_COLORS.length] }} />
+              <span className="text-ink-2 truncate flex-1">{r.key}</span>
+              <span className="tnum font-bold text-navy-800">{r.n}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Card>
+  );
+}
+/* ---- loss lollipops mit Täter-Fazit ---- */
+function LossLolli({ loc }: { loc: string }) {
+  const { t, lang } = useI18n();
+  const rows = [...getVerlust()].sort((a, b) => b.n - a.n);
+  const max = Math.max(...rows.map((r) => r.n), 1);
+  const total = rows.reduce((s, r) => s + r.n, 0) || 1;
+  const top = rows[0];
+  const topPct = Math.round((top.n / total) * 100);
+  return (
+    <Card className="anim-fade-up" title={t("cockpit.verlust")} hint={lang === "de" ? "Abwanderungen: wer den Auftrag bekommen hat." : "Churn: who won the order."}>
+      <p className="px-4 pt-0.5 pb-2.5 text-[12.5px] leading-relaxed text-ink-2 border-b border-line mb-2">
+        <strong className="text-navy-800">{lang === "de" ? "Fazit: " : "Takeaway: "}</strong>
+        {lang === "de"
+          ? `${top.key} holt ${topPct} % der verlorenen Aufträge – dort lohnt die Rückhol-Kampagne.`
+          : `${top.key} takes ${topPct} % of lost orders – worth a win-back campaign there.`}
+      </p>
+      <div className="px-4 pb-4 space-y-2">
+        {rows.map((r, i) => (
           <div key={r.key}>
             <div className="flex items-baseline justify-between gap-2 mb-[3px]">
-              <span className="text-[12.5px] text-ink truncate">{r.key}</span>
-              <span className="tnum text-[12px] font-semibold text-navy-800 shrink-0">{r.n}</span>
+              <span className="text-[12.5px] text-ink font-medium truncate">{r.key}</span>
+              <span className="tnum text-[12px] font-extrabold text-navy-800 shrink-0">{r.n}</span>
             </div>
-            <div className="h-[7px] rounded-full bg-surface-2 overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{ width: `${Math.max(3, (r.n / max) * 100)}%`, background: gradient }}
+            <div className="flex-1 h-[7px] rounded-full bg-slate-100 relative">
+              <span
+                className="anim-grow-x absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#1c3b51] to-[#356a8c]"
+                style={{ width: `${Math.max(4, (r.n / max) * 100)}%`, animationDelay: `${Math.min(i * 60, 360)}ms` }}
+              />
+              <span
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full ring-2 ring-white shadow bg-[#1c3b51] anim-fade-in"
+                style={{ left: `${Math.max(4, (r.n / max) * 100)}%`, animationDelay: `${300 + Math.min(i * 60, 360)}ms` }}
               />
             </div>
           </div>

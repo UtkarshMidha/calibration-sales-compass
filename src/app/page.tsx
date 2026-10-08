@@ -133,24 +133,23 @@ export default function DashboardPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="px-5 py-4 max-w-[1400px] mx-auto space-y-4">
-        {/* ---------------- hero ---------------- */}
-        <div className="hero px-6 py-5 flex items-center gap-6 flex-wrap anim-fade-up">
-          <div className="relative z-10 min-w-0 flex-1">
-            <p className="text-white/70 text-[13px] font-medium">{greeting}, {firstName} —</p>
-            <h1 className="text-white text-[22px] md:text-[26px] font-extrabold tracking-tight leading-tight">
+        {/* ---------------- Kopfzeile ---------------- */}
+        <div className="card px-5 py-4 flex items-center gap-4 flex-wrap anim-fade-up">
+          <span className="w-11 h-11 rounded-2xl bg-blue-50 grid place-items-center shrink-0">
+            <Sun size={22} className="text-amber-500" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12.5px] font-medium text-slate-500">{greeting}, {firstName} · <span className="tnum">{dateWeekday("2026-10-07", loc)}</span></p>
+            <h1 className="text-slate-900 text-[20px] md:text-[22px] font-extrabold tracking-tight leading-tight">
               {lang === "de" ? "Hier sind Ihre heutigen Empfehlungen" : "Here are today's recommendations"}
             </h1>
-            <p className="text-white/75 text-[13px] mt-1 tnum">
-              {rk?.empfehlungen ?? list.length} {lang === "de" ? "priorisierte Kunden" : "prioritized customers"} · {lang === "de" ? "Erwarteter Umsatz" : "Expected revenue"}: {euro(rk?.umsatzHeute ?? evSum, loc)}
-            </p>
           </div>
-          <div className="relative z-10 hidden md:flex items-center gap-3 bg-white/95 rounded-2xl px-4 py-3 shadow-lg shrink-0">
-            <span className="w-10 h-10 rounded-xl bg-amber-100 grid place-items-center">
-              <Sun size={20} className="text-amber-500" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 h-8 text-[12.5px] font-bold text-slate-800 tnum">
+              {rk?.empfehlungen ?? list.length} {lang === "de" ? "Kunden" : "customers"}
             </span>
-            <span>
-              <span className="block text-[13.5px] font-bold text-slate-900 tnum">{dateWeekday("2026-10-07", loc)}</span>
-              <span className="block text-[12px] text-slate-500">{lang === "de" ? "Zeit, Chancen zu nutzen!" : "Time to seize opportunities!"}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 border border-blue-100 px-3 h-8 text-[12.5px] font-bold text-[#1d4ed8] tnum">
+              {euro(rk?.umsatzHeute ?? evSum, loc)}
             </span>
           </div>
         </div>
@@ -183,10 +182,10 @@ export default function DashboardPage() {
               <header className="flex items-center gap-3 px-5 pt-4 pb-3 flex-wrap">
                 <div>
                   <h2 className="text-[15px] font-bold text-slate-900 flex items-center gap-2">
-                    <Sparkles size={16} className="text-[#2563eb]" /> {t("dash.topEmpfehlungen")}
+                    <TrendingUp size={16} className="text-[#2563eb]" /> {t("dash.topEmpfehlungen")}
                   </h2>
                   <p className="text-[12.5px] text-slate-500">
-                    {lang === "de" ? "Diese Kunden sollten Sie heute kontaktieren – basierend auf Daten und KI-Analyse." : "Contact these customers today – based on data and AI analysis."}
+                    {lang === "de" ? "Diese Kunden sollten Sie heute kontaktieren – aus Fälligkeiten, Verlauf und Potenzial." : "Contact these customers today – from due dates, history and potential."}
                   </p>
                 </div>
                 <div className="flex-1" />

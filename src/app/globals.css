@@ -325,6 +325,11 @@ summary:focus-visible {
   overflow: visible;
 }
 
+.anim-grow-x {
+  animation: grow-x 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: left center;
+}
+
 /* ---------- charts: motion + polish ---------- */
 @keyframes bar-grow {
   from {

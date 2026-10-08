@@ -23,6 +23,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { buildEmail, buildEml, buildLeitfaden } from "@/lib/content";
 import {
   USERS,
+  getEmpfehlungFuer,
   getKandidatenZahl,
   getKunde,
   getMessmittel,
@@ -68,6 +69,7 @@ export default function HeutePage() {
   const [spaeterOpen, setSpaeterOpen] = useState(false);
   const [warum, setWarum] = useState(false);
   const [fokus, setFokus] = useState(false);
+  const [ansicht, setAnsicht] = useState<"offen" | "erledigt">("offen");
 
   const list = app.tagesliste;
   const success = useErfolgschance();
@@ -175,50 +177,64 @@ export default function HeutePage() {
 
   const high = list.filter((i) => i.prioritaet === "hoch").length;
   const doneCount = Object.keys(app.done).length;
+  const doneItems = useMemo(
+    () =>
+      Object.keys(app.done)
+        .map((kundeId) => ({
+          kundeId,
+          erg: app.ergebnisse[kundeId],
+          wv: app.wiedervorlagen[kundeId],
+          emp: getEmpfehlungFuer(kundeId, app.stichtag, app.settings),
+        }))
+        .sort((a, b) => a.kundeId.localeCompare(b.kundeId)),
+    [app.done, app.ergebnisse, app.wiedervorlagen, app.stichtag, app.settings],
+  );
   const top = list[0];
   const topKunde = top ? getKunde(top.kundeId) : undefined;
   const activeFilters = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* ---------------- briefing ---------------- */}
+      {/* ---------------- Kopfzeile ---------------- */}
       <div className="px-5 pt-4 pb-3 shrink-0">
-        <div className="relative overflow-hidden rounded-[14px] bg-gradient-to-r from-navy-900 via-navy-800 to-navy-850 text-white px-5 py-3.5 grain anim-fade-up">
-          <div className="relative flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-[8px] bg-brand grid place-items-center shrink-0">
-                <Sparkles size={15} />
+        <div className="card px-5 py-3 anim-fade-up">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-7 h-7 rounded-[8px] bg-blue-50 grid place-items-center shrink-0">
+                <Target size={15} className="text-[#2563eb]" />
               </span>
-              <p className="text-[13.5px] leading-snug">
+              <p className="text-[13.5px] leading-snug text-ink truncate">
                 <strong className="font-bold">
                   {lang === "de"
                     ? `Guten Morgen, ${ANREDE_NAME[app.user.id] ?? app.user.kurz}.`
                     : `Good morning, ${t(app.user.nameKey).split(" ")[0]}.`}
                 </strong>{" "}
-                {lang === "de"
-                  ? `${list.length} Empfehlungen für heute, davon ${high} mit hoher Priorität.`
-                  : `${list.length} recommendations for today, ${high} of them high priority.`}
+                <span className="text-ink-2">
+                  {lang === "de"
+                    ? `${list.length} Empfehlungen für heute, davon ${high} mit hoher Priorität.`
+                    : `${list.length} recommendations for today, ${high} of them high priority.`}
+                </span>
                 {topKunde && (
-                  <>
+                  <span className="text-ink-2">
                     {" "}
                     {lang === "de" ? "Größter Hebel:" : "Biggest lever:"}{" "}
-                    <strong className="font-bold text-brand">
+                    <strong className="font-bold text-navy-800">
                       {topKunde.name} ({top!.empfehlung.betroffeneAnzahl} {lang === "de" ? "überfällige Messmittel" : "overdue instruments"})
                     </strong>
                     .
-                  </>
+                  </span>
                 )}
               </p>
             </div>
             <div className="flex-1" />
-            <div className="hidden md:flex items-center gap-5 text-[11.5px] text-white/70">
-              <span className="tnum">
+            <div className="hidden md:flex items-center gap-2 text-[11.5px]">
+              <span className="tnum inline-flex items-center h-7 px-2.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
                 {lang === "de" ? "Vorschlagsliste" : "Candidates"}:{" "}
-                <strong className="text-white">{numDE(getKandidatenZahl(app.stichtag))}</strong>
+                <strong className="text-slate-900 ml-1">{numDE(getKandidatenZahl(app.stichtag))}</strong>
               </span>
-              <span className="tnum">
+              <span className="tnum inline-flex items-center h-7 px-2.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
                 {lang === "de" ? "Überfällig gesamt" : "Overdue total"}:{" "}
-                <strong className="text-white">{numDE(64915)}</strong>
+                <strong className="text-slate-900 ml-1">{numDE(64915)}</strong>
               </span>
             </div>
           </div>
@@ -278,21 +294,69 @@ export default function HeutePage() {
       {!fokus ? (
       <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
         <div className="max-w-4xl mx-auto card overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-line bg-surface-1 flex items-center gap-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2">{t("heute.tagesliste")}</h2>
-            <div className="flex-1 max-w-[220px]">
-              <Progress
-                value={doneCount}
-                total={app.settings.kapazitaet}
-                label={t("heute.fortschritt", { done: doneCount, total: app.settings.kapazitaet })}
-              />
+          <div className="px-4 py-2.5 border-b border-line bg-surface-1 flex items-center gap-3 flex-wrap">
+            <div className="inline-flex items-center gap-1 rounded-[9px] bg-surface-0 border border-line p-[3px]">
+              <button
+                onClick={() => setAnsicht("offen")}
+                className={clsx(
+                  "h-[26px] px-3 rounded-[7px] text-[12px] font-bold transition-colors",
+                  ansicht === "offen" ? "bg-navy-800 text-white" : "text-ink-3 hover:text-ink",
+                )}
+              >
+                {lang === "de" ? "Offen" : "Open"} <span className="tnum opacity-70">{filtered.length}</span>
+              </button>
+              <button
+                onClick={() => setAnsicht("erledigt")}
+                className={clsx(
+                  "h-[26px] px-3 rounded-[7px] text-[12px] font-bold transition-colors",
+                  ansicht === "erledigt" ? "bg-navy-800 text-white" : "text-ink-3 hover:text-ink",
+                )}
+              >
+                {t("akt.erledigt")} <span className="tnum opacity-70">{doneCount}</span>
+              </button>
             </div>
-            <div className="flex-1" />
-            <span className="hidden sm:block text-[11px] text-ink-3">
-              {lang === "de" ? "Klicken oder Enter für Details" : "Click or Enter for details"}
-            </span>
+            {ansicht === "offen" ? (
+              <>
+                <div className="flex-1 max-w-[220px]">
+                  <Progress
+                    value={doneCount}
+                    total={app.settings.kapazitaet}
+                    label={t("heute.fortschritt", { done: doneCount, total: app.settings.kapazitaet })}
+                  />
+                </div>
+                <div className="flex-1" />
+                <span className="hidden sm:block text-[11px] text-ink-3">
+                  {lang === "de" ? "Klicken oder Enter für Details" : "Click or Enter for details"}
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="flex-1" />
+                <span className="hidden sm:block text-[11px] text-ink-3">
+                  {lang === "de" ? "Protokollierte Ergebnisse – zurückholbar" : "Logged outcomes – restorable"}
+                </span>
+                <Btn
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    const ok = window.confirm(
+                      lang === "de"
+                        ? "Wirklich alles zurücksetzen? Claims, Ergebnisse, Entwürfe und Lernwerte werden gelöscht."
+                        : "Really reset everything? Claims, outcomes, drafts and learned values will be deleted.",
+                    );
+                    if (ok) {
+                      app.resetDemo();
+                      app.toast(lang === "de" ? "Zurückgesetzt – frischer POC-Stand." : "Reset – fresh POC state.");
+                    }
+                  }}
+                >
+                  {lang === "de" ? "Demo zurücksetzen" : "Reset demo"}
+                </Btn>
+              </>
+            )}
           </div>
 
+          {ansicht === "offen" ? (
           <div className="divide-y divide-[var(--color-line)]">
             {filtered.length === 0 && (
               <EmptyState
@@ -350,6 +414,45 @@ export default function HeutePage() {
               );
             })}
           </div>
+          ) : (
+          /* ---------------- Erledigt: alle bearbeiteten mit Ergebnis + Rückholen ---------------- */
+          <div className="divide-y divide-[var(--color-line)]">
+            {doneItems.length === 0 && (
+              <EmptyState
+                title={lang === "de" ? "Noch nichts erledigt" : "Nothing done yet"}
+                hint={lang === "de" ? "Erledigte Empfehlungen landen hier mit Ergebnis." : "Completed recommendations land here with their outcome."}
+              />
+            )}
+            {doneItems.map((d) => {
+              const k = getKunde(d.kundeId);
+              if (!k) return null;
+              return (
+                <div key={d.kundeId} className="w-full px-4 py-3 flex items-center gap-2.5 flex-wrap">
+                  <span className="w-[7px] h-[7px] rounded-full bg-ok shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[13.5px] font-bold text-ink truncate">{k.name}</span>
+                      <span className="tnum text-[11.5px] text-ink-3 shrink-0">{k.nummer}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      {d.emp && <Chip tone={toneOf(d.emp.empfehlung.anlass)}>{t(`anlass.${d.emp.empfehlung.anlass}` as "anlass.ueberfaellig")}</Chip>}
+                      {d.erg ? (
+                        <Chip tone="navy">{t(`ergebnis.${d.erg.code}` as "ergebnis.angebot")}</Chip>
+                      ) : (
+                        <Chip tone="brand">{t("heute.wiedervorlage")}{d.wv ? ` · ${date(d.wv, loc)}` : ""}</Chip>
+                      )}
+                      {d.erg?.note && <span className="text-[11.5px] text-ink-3 truncate max-w-[40%]">„{d.erg.note}“</span>}
+                    </div>
+                  </div>
+                  <span className="tnum text-[13px] font-bold text-navy-800 shrink-0">{d.emp ? euro(d.emp.ev, loc) : "–"}</span>
+                  <Btn size="sm" variant="secondary" onClick={() => { app.undo(d.kundeId); app.toast(lang === "de" ? "Zurückgeholt – wieder auf der Liste." : "Restored – back on the list."); }}>
+                    {lang === "de" ? "Zurückholen" : "Restore"}
+                  </Btn>
+                </div>
+              );
+            })}
+          </div>
+          )}
         </div>
       </div>
       ) : selectedItem && kunde ? (

@@ -97,6 +97,8 @@ interface AppCtx {
   pitch: boolean;
   applyPitch: () => void;
   resetPitch: () => void;
+  /** POC-Reset: Arbeitsstand (Claims, Ergebnisse, Wiedervorlagen, Entwürfe, Lernwerte) löschen, Identität/Einstellungen behalten. */
+  resetDemo: () => void;
   paletteOpen: boolean;
   setPaletteOpen: (v: boolean) => void;
   assistantOpen: boolean;
@@ -272,6 +274,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toast("Pitch-Modus zurückgesetzt.");
   }, [toast]);
 
+  const resetDemo = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      claims: {},
+      ergebnisse: {},
+      wiedervorlagen: {},
+      done: {},
+      drafts: [],
+      draftCounter: 123,
+      lernStats: {
+        faellig_bald: { versuche: 0, erfolge: 0 },
+        ueberfaellig: { versuche: 0, erfolge: 0 },
+        abwanderung: { versuche: 0, erfolge: 0 },
+        branche: { versuche: 0, erfolge: 0 },
+        portal: { versuche: 0, erfolge: 0 },
+      },
+    }));
+    try {
+      localStorage.removeItem("pecal-assistant-v1");
+    } catch {
+      /* noop */
+    }
+    setSelectedKunde(null);
+  }, []);
+
   const tagesliste = useMemo(
     () =>
       getTagesliste(state.stichtag, state.settings, {
@@ -358,6 +385,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     pitch: state.pitch,
     applyPitch,
     resetPitch,
+    resetDemo,
     paletteOpen,
     setPaletteOpen,
     assistantOpen,

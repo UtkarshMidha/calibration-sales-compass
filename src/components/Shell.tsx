@@ -4,6 +4,7 @@ import clsx from "clsx";
 import {
   ChartColumn,
   FileText,
+  History,
   LayoutDashboard,
   ListChecks,
   Ruler,
@@ -27,6 +28,7 @@ import { Btn, Kbd, Modal, Segmented } from "./ui";
 function pageTitle(pathname: string, t: ReturnType<typeof useI18n>["t"]): string {
   if (pathname === "/") return t("nav.dashboard");
   if (pathname.startsWith("/tagesliste")) return t("nav.tagesliste");
+  if (pathname.startsWith("/verlauf")) return t("nav.verlauf");
   if (pathname.startsWith("/kunden/")) return `${t("nav.kunden")} · 360`;
   if (pathname.startsWith("/kunden")) return t("kunden.titel");
   if (pathname.startsWith("/messmittel")) return t("nav.messmittel");
@@ -80,6 +82,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const arbeit = [
     { href: "/", icon: LayoutDashboard, key: "nav.dashboard" as const, match: (p: string) => p === "/" },
     { href: "/tagesliste", icon: ListChecks, key: "nav.tagesliste" as const, match: (p: string) => p.startsWith("/tagesliste") },
+    { href: "/verlauf", icon: History, key: "nav.verlauf" as const, match: (p: string) => p.startsWith("/verlauf") },
     { href: "/kunden", icon: Users, key: "nav.kunden" as const, match: (p: string) => p.startsWith("/kunden") },
     { href: "/messmittel", icon: Ruler, key: "nav.messmittel" as const, match: (p: string) => p.startsWith("/messmittel") },
     { href: "/angebote", icon: FileText, key: "nav.angebote" as const, match: (p: string) => p.startsWith("/angebote") },
@@ -272,6 +275,7 @@ export function Shell({ children }: { children: ReactNode }) {
           {[
             { href: "/", label: t("nav.dashboard") },
             { href: "/tagesliste", label: t("nav.tagesliste") },
+            { href: "/verlauf", label: t("nav.verlauf") },
             { href: "/kunden", label: t("kunden.titel") },
             { href: "/messmittel", label: t("nav.messmittel") },
             { href: "/angebote", label: t("nav.angebote") },

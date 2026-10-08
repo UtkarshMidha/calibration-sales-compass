@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ChartColumn, FileText, LayoutDashboard, ListChecks, Ruler, Search, Settings, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { ChartColumn, FileText, History, LayoutDashboard, ListChecks, Ruler, Search, Settings, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getKunden, type Kunde } from "@/lib/data";
@@ -41,6 +41,7 @@ export function CommandPalette() {
     const pages: Row[] = [
       { kind: "page", id: "p0", label: t("nav.dashboard"), hint: hintFor("Übersicht mit Kennzahlen", "Overview with KPIs"), href: "/", icon: LayoutDashboard },
       { kind: "page", id: "p1", label: t("nav.tagesliste"), hint: hintFor("Priorisierte Empfehlungen für heute", "Today's prioritized recommendations"), href: "/tagesliste", icon: ListChecks },
+      { kind: "page", id: "p2", label: t("nav.verlauf"), hint: hintFor("Abwanderung bisher und Potenzial", "Churn so far and potential"), href: "/verlauf", icon: History },
       { kind: "page", id: "p2", label: t("kunden.titel"), hint: hintFor("Kunden suchen und öffnen", "Search and open customers"), href: "/kunden", icon: Users },
       { kind: "page", id: "p3", label: t("nav.messmittel"), hint: hintFor("Fälligkeiten und Status", "Due dates and status"), href: "/messmittel", icon: Ruler },
       { kind: "page", id: "p4", label: t("nav.angebote"), hint: hintFor("Entwürfe und PDF", "Drafts and PDF"), href: "/angebote", icon: FileText },

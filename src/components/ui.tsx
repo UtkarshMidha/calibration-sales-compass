@@ -481,7 +481,7 @@ export function Sparkline({
   showBaseline,
   lang = "de",
 }: {
-  data: { monat: string; historie: boolean; kalibrierungen: number; p10: number; p90: number; baseline?: number }[];
+  data: { monat: string; historie: boolean; partial?: boolean; kalibrierungen: number; p10: number; p90: number; baseline?: number }[];
   height?: number;
   showBaseline?: boolean;
   lang?: Lang;
@@ -489,30 +489,36 @@ export function Sparkline({
   const w = 760;
   const h = height;
   const pad = { l: 38, r: 8, t: 10, b: 20 };
-  const values = data.flatMap((d) => [d.kalibrierungen, d.p10, ...(showBaseline && d.baseline ? [d.baseline] : [])]);
+  /* Teildaten-Monate (z. B. Sep 2026, Stand 24.09.) aus der Skala heraushalten,
+   * sonst drückt der unvollständige Monat die ganze Historie nach unten. */
+  const full = data.filter((d) => !d.partial);
+  const values = full.flatMap((d) => [d.kalibrierungen, d.p10, ...(showBaseline && d.baseline ? [d.baseline] : [])]);
   const min = Math.min(...values) * 0.92;
   const max = Math.max(...values) * 1.05;
   const x = (i: number) => pad.l + (i / (data.length - 1)) * (w - pad.l - pad.r);
   const y = (v: number) => pad.t + (1 - (v - min) / (max - min)) * (h - pad.t - pad.b);
 
-  const hist = data.filter((d) => d.historie);
-  const fore = data.filter((d) => !d.historie);
-  const histPath = hist.map((d, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(d.kalibrierungen)}`).join(" ");
-  const foreStart = hist.length - 1;
-  const forePath = fore
-    .map((d, i) => `${i === 0 ? "M" : "L"} ${x(foreStart + i)} ${y(d.kalibrierungen)}`)
+  const idx = data.map((d, i) => ({ d, i }));
+  const histPts = idx.filter(({ d }) => d.historie && !d.partial);
+  const fore = idx.filter(({ d }) => !d.historie);
+  const partialPts = idx.filter(({ d }) => d.partial);
+  const lastHistIdx = histPts.length > 0 ? histPts[histPts.length - 1].i : 0;
+  const histPath = histPts.map(({ d, i }, k) => `${k === 0 ? "M" : "L"} ${x(i)} ${y(d.kalibrierungen)}`).join(" ");
+  /* Prognoselinie startet am letzten vollen Historienmonat – kein Sprung, keine Klippe. */
+  const forePath = [{ i: lastHistIdx, v: data[lastHistIdx].kalibrierungen }, ...fore.map(({ d, i }) => ({ i, v: d.kalibrierungen }))]
+    .map((p, k) => `${k === 0 ? "M" : "L"} ${x(p.i)} ${y(p.v)}`)
     .join(" ");
   const band = [
-    ...fore.map((d, i) => `${i === 0 ? "M" : "L"} ${x(foreStart + i)} ${y(d.p90)}`),
-    ...[...fore].reverse().map((d, i) => `L ${x(foreStart + fore.length - 1 - i)} ${y(d.p10)}`),
+    `M ${x(lastHistIdx)} ${y(data[lastHistIdx].kalibrierungen)}`,
+    ...fore.map(({ d, i }) => `L ${x(i)} ${y(d.p90)}`),
+    ...[...fore].reverse().map(({ d, i }) => `L ${x(i)} ${y(d.p10)}`),
     "Z",
   ].join(" ");
-  const basePath = fore
-    .filter((d) => d.baseline != null)
-    .map((d, i) => `${i === 0 ? "M" : "L"} ${x(foreStart + i)} ${y(d.baseline!)}`)
-    .join(" ");
+  const basePts = fore.filter(({ d }) => d.baseline != null);
+  const basePath = basePts.map(({ d, i }, k) => `${k === 0 ? "M" : "L"} ${x(i)} ${y(d.baseline!)}`).join(" ");
 
-  const splitX = x(foreStart);
+  /* Trenner an den Übergang volle Historie → Prognose (dort startet auch die Punktlinie). */
+  const splitX = x(lastHistIdx);
   const ticks = [0, Math.floor(data.length / 3), Math.floor((2 * data.length) / 3), data.length - 1];
 
   return (
@@ -548,16 +554,31 @@ export function Sparkline({
       <rect x={splitX} y={pad.t} width={w - pad.r - splitX} height={h - pad.t - pad.b} fill="var(--color-azure-100)" opacity="0.5" rx="6" />
       <path d={band} fill="var(--color-azure)" opacity="0.2" />
       {showBaseline && basePath && <path d={basePath} fill="none" stroke="var(--color-ink-3)" strokeWidth="1.2" strokeDasharray="5 4" />}
-      <path d={`${histPath} L ${x(hist.length - 1)} ${h - pad.b} L ${x(0)} ${h - pad.b} Z`} fill="url(#spark-hist)" />
+      <path d={`${histPath} L ${x(lastHistIdx)} ${h - pad.b} L ${x(histPts[0]?.i ?? 0)} ${h - pad.b} Z`} fill="url(#spark-hist)" />
       <path d={histPath} fill="none" stroke="var(--color-navy-800)" strokeWidth="2.2" strokeLinecap="round" />
       <path d={forePath} fill="none" stroke="url(#spark-fore)" strokeWidth="2.6" strokeDasharray="7 4" strokeLinecap="round" />
+      {/* Teildaten-Monat: hohler Marker statt Linienpunkt */}
+      {partialPts.map(({ d, i }) => (
+        <g key={d.monat}>
+          <title>{`${d.monat}: ${Math.round(d.kalibrierungen).toLocaleString(lang === "de" ? "de-DE" : "en-GB")} (${lang === "en" ? "partial data" : "Teildaten"})`}</title>
+          <circle cx={x(i)} cy={y(d.kalibrierungen)} r="4" fill="#fff" stroke="var(--color-ink-3)" strokeWidth="1.6" strokeDasharray="2 1.5" />
+        </g>
+      ))}
       <line x1={splitX} x2={splitX} y1={pad.t} y2={h - pad.b} stroke="var(--color-brand)" strokeWidth="1.4" strokeDasharray="3 3" />
-      <circle cx={splitX} cy={y(data[foreStart]?.kalibrierungen ?? min)} r="3.5" fill="var(--color-brand)" stroke="#fff" strokeWidth="1.5" />
+      <circle cx={splitX} cy={y(data[lastHistIdx]?.kalibrierungen ?? min)} r="3.5" fill="var(--color-brand)" stroke="#fff" strokeWidth="1.5" />
       <text x={splitX + 6} y={pad.t + 10} fontSize="9.5" fontWeight="700" fill="var(--color-brand-700)">
         {lang === "en" ? "Forecast" : "Prognose"}
       </text>
-      {ticks.map((i) => (
-        <text key={i} x={x(i)} y={h - 6} textAnchor="middle" fontSize="9.5" className="tnum" fill="var(--color-ink-3)">
+      {ticks.map((i, k) => (
+        <text
+          key={i}
+          x={k === ticks.length - 1 ? w - pad.r - 2 : x(i)}
+          y={h - 6}
+          textAnchor={k === ticks.length - 1 ? "end" : "middle"}
+          fontSize="9.5"
+          className="tnum"
+          fill="var(--color-ink-3)"
+        >
           {data[i]?.monat.slice(2)}
         </text>
       ))}

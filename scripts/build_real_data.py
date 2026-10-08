@@ -20,7 +20,7 @@ import json
 import math
 import os
 from collections import Counter, defaultdict
-from datetime import date
+from datetime import date, timedelta
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "database_tables")
@@ -84,6 +84,8 @@ def main():
     due_next6 = Counter()
     overdue_rows = []  # (faelligkeit, dict) — 65k rows OK in memory
     duesoon_rows = []
+    uuid_kunde = {}  # MESSMITTEL_UUID (lower) -> Kunde (für Auftrags-Join)
+    k_gruppen = defaultdict(set)  # kunde -> {MESSMITTELGRUPPE}
     total = 0
     stopped = 0
     overdue = 0
@@ -96,6 +98,12 @@ def main():
             k = (row.get("KUNDENNUMMER_SAP") or "").strip()
             if k:
                 alle_kunden.add(k)
+                uuid = (row.get("MESSMITTEL_UUID") or "").strip().lower()
+                if uuid:
+                    uuid_kunde[uuid] = k
+                g = (row.get("MESSMITTELGRUPPE") or "").strip()
+                if g:
+                    k_gruppen[k].add(g)
             gruppe_counts[row.get("MESSMITTELGRUPPE") or "?"] += 1
             lp = parse_day(row.get("DATUM_LETZTE_PRUEFUNG"))
             if k and lp and (k not in k_letzte or lp > k_letzte[k]):
@@ -165,6 +173,8 @@ def main():
     dakk_share_d = 0
     k_last_kal = {}
     k_kal12m = Counter()
+    k_monat = defaultdict(Counter)  # kunde -> {YYYY-MM: anzahl}, Fenster 2025-04..2026-09
+    kunden_monat = defaultdict(set)  # YYYY-MM -> {kunden} (aktive Kunden je Monat)
     with open(os.path.join(SRC, "KALIBRIERUNGEN.csv"), encoding="utf-8-sig", newline="") as fh:
         for row in csv.DictReader(fh):
             b = (row.get("BEGINN") or "")[:7]
@@ -179,25 +189,31 @@ def main():
             if k and bd:
                 if b >= "2025-10" and b <= "2026-09":
                     k_kal12m[k] += 1
+                if "2025-04" <= b <= "2026-09":
+                    k_monat[k][b] += 1
+                    kunden_monat[b].add(k)
                 if k not in k_last_kal or bd > k_last_kal[k]:
                     k_last_kal[k] = bd
     print(f"KALIBRIERUNGEN: monate={len(kal_mon)} dakk2026={dakk_share_n}/{dakk_share_d}")
 
-    # ---------- AUFTRAGSPOSITIONEN scan ----------
+    # ---------- AUFTRAGSPOSITIONEN scan (Join über Messmittel-UUID -> Kunde) ----------
     quellen = Counter()
     k_pos12m = Counter()
     k_hub12m = Counter()
+    pos_joined = 0
     with open(os.path.join(SRC, "AUFTRAGSPOSITIONEN.csv"), encoding="utf-8-sig", newline="") as fh:
         for row in csv.DictReader(fh):
             q = (row.get("AUFTRAGSPOSITIONSQUELLE") or "?").strip() or "?"
             quellen[q] += 1
             d = parse_day(row.get("DATUM_ERSTELLT"))
             if d and date(2025, 9, 25) <= d <= STICHTAG:
-                # position -> kunde via messmittel uuid? not directly available;
-                # count globally only (per-kunde portal share approximated via HUB label is
-                # not joinable here, so portal-Anlass stays model-side).
-                pass
-    print(f"AUFTRAGSPOSITIONEN quellen={dict(quellen)}")
+                kk = uuid_kunde.get((row.get("KALIBRIERGEGENSTANDUUID") or "").strip().lower(), "")
+                if kk:
+                    pos_joined += 1
+                    k_pos12m[kk] += 1
+                    if q == "HUB":
+                        k_hub12m[kk] += 1
+    print(f"AUFTRAGSPOSITIONEN quellen={dict(quellen)} joined12m={pos_joined}")
 
     # ---------- DIENSTLEISTUNGEN status ----------
     dl_status = Counter()
@@ -235,6 +251,133 @@ def main():
     # churn proxy: kunden with last calibration > 6 months ago and overdue > 0
     churn = sum(1 for k in over_kunden
                 if ((k_last_kal.get(k) or k_letzte.get(k) or STICHTAG) - STICHTAG).days * -1 > 180)
+
+    # ---------- Verlauf: Abwanderung bisher (18 Monate, klickbar) ----------
+    verlauf_monate = []
+    d = date(2025, 4, 1)
+    while d <= date(2026, 9, 1):
+        verlauf_monate.append(month_key(d))
+        d = date(d.year + (1 if d.month == 12 else 0), 1 if d.month == 12 else d.month + 1, 1)
+
+    def last_of(k):
+        return k_last_kal.get(k) or k_letzte.get(k)
+
+    def still_seit_monaten(k, monate):
+        last = last_of(k)
+        if not last:
+            return False
+        return (STICHTAG - last).days > monate * 30
+
+    verlauf = []
+    for mm in verlauf_monate:
+        m_start = date(int(mm[:4]), int(mm[5:7]), 1)
+        # neu still: letzte Kalibrierung genau in M und seither (>=6 Monate) nichts mehr
+        neu = [k for k, last in ((kk, last_of(kk)) for kk in alle_kunden)
+               if last and month_key(last) == mm and (STICHTAG - last).days >= 180]
+        # kumuliert bis M: letzte Kalibrierung <= Monatsende und Abstand zum Stichtag > 180 Tage
+        m_ende = date(m_start.year + (1 if m_start.month == 12 else 0), 1 if m_start.month == 12 else m_start.month + 1, 1) - timedelta(days=1)
+        kum = [k for k in alle_kunden
+               if last_of(k) and last_of(k) <= m_ende and (STICHTAG - last_of(k)).days > 180]
+        kum_wert = sum((k_over.get(k, 0) * median_min / 60.0 * STUNDENSATZ) for k in kum)
+        # Top-Details des Monats: neu Stillgelegte nach Vorvolumen (6M davor)
+        det = []
+        for k in neu:
+            last = last_of(k)
+            vorm = sum(v for m2, v in k_monat.get(k, {}).items() if m2 < mm)
+            det.append({
+                "kunde": k,
+                "branche": branche_of.get(k, "Sonstiges"),
+                "letzteKal": last.isoformat() if last else None,
+                "ueberfaellig": k_over.get(k, 0),
+                "volumen6m": vorm,
+                "wert": round(k_over.get(k, 0) * median_min / 60.0 * STUNDENSATZ),
+            })
+        det.sort(key=lambda r: (-r["volumen6m"], -r["ueberfaellig"]))
+        verlauf.append({
+            "monat": mm,
+            "kalibrierungen": kal_mon.get(mm, 0),
+            "aktiveKunden": len(kunden_monat.get(mm, set())),
+            "neuStill": len(neu),
+            "stillKumuliert": len(kum),
+            "stillWert": round(kum_wert),
+            "top": det[:30],
+        })
+    print(f"verlauf: {len(verlauf)} monate, kumuliert still={verlauf[-1]['stillKumuliert']} wert={verlauf[-1]['stillWert']}")
+
+    # ---------- Potenzial: kommende Fälligkeiten, Portal, Branchenlücken ----------
+    kommend = []
+    for k, n in k_due30.most_common(40):
+        last = last_of(k)
+        kommend.append({
+            "kunde": k, "branche": branche_of.get(k, "Sonstiges"),
+            "due30": n, "aktiv": k_aktiv.get(k, 0),
+            "letzteKal": last.isoformat() if last else None,
+            "wert": round(n * median_min / 60.0 * STUNDENSATZ * 0.60),
+        })
+    kommend.sort(key=lambda r: -r["wert"])
+    kommend = kommend[:25]
+
+    portal = []
+    for k in alle_kunden:
+        pos = k_pos12m.get(k, 0)
+        if pos >= 5 and k_hub12m.get(k, 0) == 0:
+            portal.append({
+                "kunde": k, "branche": branche_of.get(k, "Sonstiges"),
+                "auftraege12m": pos, "aktiv": k_aktiv.get(k, 0),
+                "wert": round(k_aktiv.get(k, 0) * median_min / 60.0 * STUNDENSATZ * 0.05),
+            })
+    portal.sort(key=lambda r: (-r["aktiv"], -r["auftraege12m"]))
+    portal = portal[:25]
+    print(f"potenzial: kommend={len(kommend)} portal-ohne-hub={len(portal)}")
+
+    # Branchenlücken (Peer-Vergleich je Branche × Messmittelgruppe)
+    br_kunden_n = Counter()
+    br_gruppe_kunden = Counter()
+    for k in alle_kunden:
+        b = branche_of.get(k, "Sonstiges")
+        if b in ("Sonstiges", "Ohne Zuordnung") or k_aktiv.get(k, 0) < 5:
+            continue
+        br_kunden_n[b] += 1
+        for g in k_gruppen.get(k, set()):
+            br_gruppe_kunden[(b, g)] += 1
+    luecken = []
+    for k in alle_kunden:
+        b = branche_of.get(k, "Sonstiges")
+        if b in ("Sonstiges", "Ohne Zuordnung") or k_aktiv.get(k, 0) < 20:
+            continue
+        owned = k_gruppen.get(k, set())
+        n_br = br_kunden_n.get(b, 0)
+        if n_br < 5:
+            continue
+        for (bb, g), cnt in br_gruppe_kunden.items():
+            if bb != b or g in owned:
+                continue
+            pen = cnt / n_br
+            if pen >= 0.40:
+                erwartet = max(1, round(k_aktiv.get(k, 0) * 0.04))
+                wert = round(erwartet * median_min / 60.0 * STUNDENSATZ)
+                luecken.append({
+                    "kunde": k, "branche": b, "gruppe": g,
+                    "peerPct": round(pen * 100), "erwartet": erwartet, "wert": wert,
+                })
+    luecken.sort(key=lambda r: -r["wert"])
+    # ein Top-Eintrag je Kunde
+    seen = set()
+    luecken_top = []
+    for l in luecken:
+        if l["kunde"] in seen:
+            continue
+        seen.add(l["kunde"])
+        luecken_top.append(l)
+        if len(luecken_top) >= 40:
+            break
+    print(f"potenzial: luecken-kunden={len(luecken_top)}")
+
+    with open(os.path.join(OUT, "verlauf.json"), "w", encoding="utf-8") as fh:
+        json.dump({"stichtag": "2026-09-25", "monate": verlauf}, fh, ensure_ascii=False)
+    with open(os.path.join(OUT, "potenzial.json"), "w", encoding="utf-8") as fh:
+        json.dump({"stichtag": "2026-09-25", "kommend": kommend, "portal": portal, "luecken": luecken_top}, fh, ensure_ascii=False)
+    print("wrote verlauf.json + potenzial.json")
 
     # ---------- monthly series (last 12m history for charts) ----------
     hist12 = []
