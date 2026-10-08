@@ -167,8 +167,8 @@ export default function AngebotPage() {
             </p>
             <p className="mt-3 leading-relaxed text-ink-2">
               {lang === "de"
-                ? `vielen Dank für Ihr Vertrauen. Für Ihre ${menge} fälligen bzw. überfälligen Messmittel (${k.branche}, ${k.ort}) bieten wir die Kalibrierung wie folgt an. Die Prüfungsart können Sie je Position umstellen – ab 01.01.2026 gilt die DAkkS-Kalibrierung (Deutsche Akkreditierungsstelle, staatlich akkreditiert) als Standard.`
-                : `thank you for your trust. For your ${menge} due or overdue instruments (${k.branche}, ${k.ort}) we offer the calibration as follows. You can change the test type per line – since 01/01/2026 DAkkS calibration (German accreditation body, state-accredited) is the standard.`}
+                ? `vielen Dank für Ihr Vertrauen. Für Ihre ${menge} fälligen bzw. überfälligen Messmittel (${k.branche}, ${k.ort}) bieten wir die Kalibrierung wie folgt an. Ab 01.01.2026 gilt die DAkkS-Kalibrierung (Deutsche Akkreditierungsstelle, staatlich akkreditiert) als Standard.`
+                : `thank you for your trust. For your ${menge} due or overdue instruments (${k.branche}, ${k.ort}) we offer the calibration as follows. Since 01/01/2026 DAkkS calibration (German accreditation body, state-accredited) is the standard.`}
             </p>
 
             {/* positions */}

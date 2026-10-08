@@ -15,6 +15,19 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import {
+  Area,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ReferenceDot,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { buildEmail } from "@/lib/content";
 import {
   GEBIETE,
@@ -87,6 +100,19 @@ export default function Kunde360Page() {
     for (const r of alleRows) m.set(r.status, (m.get(r.status) ?? 0) + 1);
     return m;
   }, [alleRows]);
+
+  /* history chart data: exact stack (DAkkS + rest + failed = total) */
+  const histData = useMemo(
+    () =>
+      aktivitaet.map((m) => ({
+        monat: m.monat,
+        dakks: m.dakks,
+        rest: Math.max(0, m.anzahl - m.dakks - m.nio),
+        nio: m.nio,
+        total: m.anzahl,
+      })),
+    [aktivitaet],
+  );
 
   const gapValue = luecken.reduce((s, l) => s + l.stunden * app.settings.stundensatz, 0);
   const gapCount = luecken.filter((l) => l.stunden > 0).length;
@@ -323,41 +349,64 @@ export default function Kunde360Page() {
           <section className="card p-5">
             <h3 className="section-label">{t("k360.historie")}</h3>
             <HistorieTakeaway rows={aktivitaet} dakksShare={k.dakksShare} nioShare={k.nioShare} lang={lang} loc={loc} />
-            <div className="flex items-end gap-[4px] h-[196px] mt-3">
-              {aktivitaet.map((m, i) => {
-                const max = Math.max(...aktivitaet.map((x) => x.anzahl), 1);
-                const h = (m.anzahl / max) * 160;
-                const hDakks = (m.dakks / max) * 160;
-                const hNio = (m.nio / max) * 160;
-                const jan = m.monat.slice(5, 7) === "01";
-                return (
-                  <div
-                    key={m.monat}
-                    title={`${Number(m.monat.slice(5, 7))}/${m.monat.slice(2, 4)}: ${num(m.anzahl, 0, loc)} · DAkkS ${num(m.dakks, 0, loc)} · n.i.O. ${num(m.nio, 0, loc)}`}
-                    className="flex-1 flex flex-col justify-end items-center group relative min-w-0"
-                  >
-                    {/* Gesamt = Höhe · davon DAkkS (blau, unten) · davon n.i.O. (violett, darüber) */}
-                    <div className="w-full bg-navy-800 rounded-t-[4px] relative overflow-hidden" style={{ height: Math.max(h, 2) }}>
-                      <div className="absolute bottom-0 left-0 right-0 bg-azure" style={{ height: hDakks }} />
-                      <div className="absolute left-0 right-0 bg-violet" style={{ bottom: hDakks, height: hNio }} />
-                    </div>
-                    <span className="tnum text-[10px] text-navy-800 font-bold absolute -top-1 opacity-0 group-hover:opacity-100 bg-surface-0 px-1 rounded whitespace-nowrap">
-                      {m.anzahl}
-                    </span>
-                    <span className="tnum text-[10px] text-ink-3 mt-1 leading-none text-center">
-                      {Number(m.monat.slice(5, 7))}.
-                      {(jan || i === 0) && <span className="block opacity-70">’{m.monat.slice(2, 4)}</span>}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="h-[210px] mt-3">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={histData} margin={{ top: 8, right: 4, left: -14, bottom: 0 }} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="2 4" stroke="var(--color-line)" vertical={false} />
+                  <XAxis
+                    dataKey="monat"
+                    tickLine={false}
+                    axisLine={false}
+                    interval={2}
+                    tick={{ fontSize: 10, fill: "#6d7378" }}
+                    tickFormatter={(v: string) => `${Number(v.slice(5, 7))}/${v.slice(2, 4)}`}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 10, fill: "#6d7378" }}
+                    width={30}
+                  />
+                  <Tooltip
+                    content={(p: unknown) => {
+                      const { active, payload, label } = p as {
+                        active?: boolean;
+                        payload?: { value?: unknown }[];
+                        label?: string;
+                      };
+                      if (!active || !payload || payload.length === 0 || !label) return null;
+                      const row = histData.find((m) => m.monat === label);
+                      if (!row) return null;
+                      return (
+                        <div className="chart-tip">
+                          <p className="t-sub">
+                            {Number(label.slice(5, 7))}/{label.slice(2, 4)}
+                          </p>
+                          <p className="font-bold tnum">
+                            {num(row.total, 0, loc)} {lang === "de" ? "Kalibrierungen" : "calibrations"}
+                          </p>
+                          <p className="tnum">
+                            DAkkS {num(row.dakks, 0, loc)} · {lang === "de" ? "Durchgefallen" : "Failed"}{" "}
+                            {num(row.nio, 0, loc)}
+                          </p>
+                        </div>
+                      );
+                    }}
+                    cursor={{ fill: "rgba(28,59,81,.06)" }}
+                  />
+                  <Bar dataKey="dakks" stackId="a" fill="var(--color-azure)" maxBarSize={24} />
+                  <Bar dataKey="rest" stackId="a" fill="var(--color-navy-800)" maxBarSize={24} />
+                  <Bar dataKey="nio" stackId="a" fill="var(--color-violet)" maxBarSize={24} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
             <div className="flex items-center gap-4 mt-3 text-[11px] text-ink-3 flex-wrap">
-              <LegendDot color="var(--color-navy-800)" label={lang === "de" ? "Gesamt (Höhe)" : "Total (height)"} />
+              <LegendDot color="var(--color-navy-800)" label={lang === "de" ? "Kalibrierungen" : "Calibrations"} />
               <span title={lang === "de" ? "DAkkS = Deutsche Akkreditierungsstelle (staatlich akkreditiert)" : "DAkkS = German accreditation body (state-accredited)"}>
-                <LegendDot color="var(--color-azure)" label={`${lang === "de" ? "davon" : "thereof"} ${t("k360.dakksAnteil")}`} />
+                <LegendDot color="var(--color-azure)" label="DAkkS" />
               </span>
-              <LegendDot color="var(--color-violet)" label={`${lang === "de" ? "davon" : "thereof"} ${t("k360.nioAnteil")}`} />
+              <LegendDot color="var(--color-violet)" label={lang === "de" ? "Durchgefallen" : "Failed"} />
             </div>
           </section>
 
@@ -511,21 +560,23 @@ function HistorieTakeaway({
   const mean = (rs: { anzahl: number }[]) => (rs.length > 0 ? rs.reduce((s, r) => s + r.anzahl, 0) / rs.length : 0);
   const delta = mean(rows.slice(-6)) - mean(rows.slice(-12, -6));
   const base = mean(rows.slice(-12, -6));
-  const trend =
-    n < 12 || (base > 0 && Math.abs(delta / base) < 0.05)
-      ? lang === "de" ? "stabil" : "steady"
-      : `${delta > 0 ? "+" : "−"}${num(Math.abs(base > 0 ? (delta / base) * 100 : 0), 0, loc)} %`;
   const dakks = Math.round(dakksShare * 100);
   const nio = Math.round(nioShare * 100);
+  const trendWord =
+    n < 12 || (base > 0 && Math.abs(delta / base) < 0.05)
+      ? lang === "de" ? "gleichbleibend" : "steady"
+      : delta > 0
+        ? lang === "de" ? "steigend" : "rising"
+        : lang === "de" ? "rückläufig" : "declining";
   const nioWord =
     nio <= 5
       ? lang === "de" ? "unauffällig" : "unsuspicious"
-      : lang === "de" ? "auffällig – prüfen" : "notable – check";
+      : lang === "de" ? "auffällig – bitte prüfen" : "notable – please check";
   return (
-    <p className="text-[12.5px] text-ink-2 leading-relaxed mt-1 mb-1 tnum">
+    <p className="text-[12.5px] text-ink-2 leading-relaxed mt-1 mb-1">
       {lang === "de"
-        ? `${n} Monate · Ø ${num(avg, 0, loc)}/Monat · Trend letzte 6: ${trend} · DAkkS-Anteil ${num(dakks, 0, loc)} % (akkreditierte Stammbindung) · n.i.O. ${num(nio, 0, loc)} % (${nioWord})`
-        : `${n} months · Ø ${num(avg, 0, loc)}/month · trend last 6: ${trend} · DAkkS share ${num(dakks, 0, loc)}% (accredited regulars) · failed ${num(nio, 0, loc)}% (${nioWord})`}
+        ? `Etwa ${num(avg, 0, loc)} Kalibrierungen pro Monat, Tendenz ${trendWord}. Davon ${num(dakks, 0, loc)} % DAkkS-Prüfungen. ${num(nio, 0, loc)} % fallen durch (${nioWord}).`
+        : `About ${num(avg, 0, loc)} calibrations per month, trend ${trendWord}. ${num(dakks, 0, loc)}% are DAkkS inspections. ${num(nio, 0, loc)}% fail (${nioWord}).`}
     </p>
   );
 }
@@ -550,15 +601,10 @@ function KundenPrognoseView({
   loc: string;
 }) {
   const { t } = useI18n();
-  /* plot geometry: wide light 80-%-Band (P10→P90), narrow dark core = mean.
-   * The band surrounds the mean — it is never stacked on top of it. */
-  const H = 164;
-  const max = Math.max(...data.map((d) => d.p90), 1);
   const sumMean = data.reduce((s, d) => s + d.kalibrierungen, 0);
-  const sumP10 = data.reduce((s, d) => s + d.p10, 0);
-  const sumP90 = data.reduce((s, d) => s + d.p90, 0);
   const peak = data.reduce((a, b) => (b.kalibrierungen > a.kalibrierungen ? b : a), data[0]);
   const kurz = (monat: string) => `${Number(monat.slice(5, 7))}/${monat.slice(2, 4)}`;
+  const bandData = data.map((d) => ({ ...d, label: kurz(d.monat), band: Math.max(0, d.p90 - d.p10) }));
 
   return (
     <div className="space-y-4 anim-fade-up">
@@ -568,50 +614,84 @@ function KundenPrognoseView({
           <p className="text-[12.5px] text-ink-2 tnum">
             {lang === "de" ? "12 Monate:" : "12 months:"}{" "}
             <strong className="text-navy-800">≈ {num(sumMean, 0, loc)}</strong>
-            <span className="text-ink-3">
-              {" "}· {lang === "de" ? "Band" : "band"} {num(sumP10, 0, loc)}–{num(sumP90, 0, loc)}
-            </span>
           </p>
         </div>
-        <p className="text-[12.5px] text-ink-2 leading-relaxed mt-1 mb-3">
+        <p className="text-[12.5px] text-ink-2 leading-relaxed mt-1">
           {lang === "de"
             ? `Erwartete Eingänge je Monat – Spitze im ${kurz(peak.monat)} (≈ ${num(peak.kalibrierungen, 0, loc)}). Kapazität und Abhol-Touren danach ausrichten.`
             : `Expected intake per month – peak in ${kurz(peak.monat)} (≈ ${num(peak.kalibrierungen, 0, loc)}). Align capacity and pickup tours accordingly.`}
         </p>
-        <div className="flex items-end gap-2 h-[200px]">
-          {data.map((d) => (
-            <div
-              key={d.monat}
-              title={`${kurz(d.monat)}: ${lang === "de" ? "erwartet" : "expected"} ${num(d.kalibrierungen, 0, loc)}, ${lang === "de" ? "Band" : "band"} ${num(d.p10, 0, loc)}–${num(d.p90, 0, loc)}`}
-              className="flex-1 h-full flex flex-col justify-end items-center relative group"
-            >
-              <div className="relative w-full" style={{ height: H }}>
-                {/* 80-%-Band */}
-                <div
-                  className="absolute inset-x-0 rounded-[4px] bg-azure/20"
-                  style={{ bottom: `${(d.p10 / max) * H}px`, height: `${Math.max(((d.p90 - d.p10) / max) * H, 3)}px` }}
-                />
-                {/* Mittelwert */}
-                <div
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-[4px] bg-navy-800"
-                  style={{ width: "56%", height: `${Math.max((d.kalibrierungen / max) * H, 2)}px` }}
-                />
-                <span className="tnum text-[10px] text-navy-800 font-bold absolute -top-1 opacity-0 group-hover:opacity-100 bg-surface-0 px-1 rounded whitespace-nowrap">
-                  {num(d.kalibrierungen, 0, loc)}
-                </span>
-              </div>
-              <span className="tnum text-[10px] text-ink-3 mt-1 leading-none">{kurz(d.monat)}</span>
-            </div>
-          ))}
+        <div className="h-[210px] mt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={bandData} margin={{ top: 10, right: 8, left: -14, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke="var(--color-line)" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 10, fill: "#6d7378" }}
+              />
+              <YAxis
+                allowDecimals={false}
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 10, fill: "#6d7378" }}
+                width={32}
+              />
+              <Tooltip
+                content={(p: unknown) => {
+                  const { active, payload, label } = p as {
+                    active?: boolean;
+                    payload?: { value?: unknown }[];
+                    label?: string;
+                  };
+                  if (!active || !payload || payload.length === 0 || !label) return null;
+                  const row = bandData.find((d) => d.label === label);
+                  if (!row) return null;
+                  return (
+                    <div className="chart-tip">
+                      <p className="t-sub">{label}</p>
+                      <p className="font-bold tnum">
+                        {lang === "de" ? "Erwartet" : "Expected"} {num(row.kalibrierungen, 0, loc)}
+                      </p>
+                      <p className="tnum">
+                        {lang === "de" ? "Spanne" : "Range"} {num(row.p10, 0, loc)}–{num(row.p90, 0, loc)}
+                      </p>
+                    </div>
+                  );
+                }}
+                cursor={{ stroke: "var(--color-line-strong)", strokeDasharray: "3 3" }}
+              />
+              <Area dataKey="p10" stackId="band" strokeWidth={0} fill="transparent" />
+              <Area dataKey="band" stackId="band" strokeWidth={0} fill="var(--color-azure)" fillOpacity={0.22} />
+              <Line
+                dataKey="kalibrierungen"
+                stroke="var(--color-navy-800)"
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: "var(--color-navy-800)", strokeWidth: 0 }}
+                activeDot={{ r: 4 }}
+              />
+              <ReferenceDot
+                x={kurz(peak.monat)}
+                y={peak.kalibrierungen}
+                r={5}
+                fill="var(--color-brand-700)"
+                stroke="#fff"
+                strokeWidth={2}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
         </div>
         <div className="flex items-center gap-4 mt-3 text-[11px] text-ink-3 flex-wrap">
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-[10px] rounded-[2px] bg-navy-800" />
-            {lang === "de" ? "Erwartet (Mittel)" : "Expected (mean)"}
+            <span className="w-4 h-[3px] rounded-full bg-navy-800" />
+            {lang === "de" ? "Erwartet" : "Expected"}
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-[10px] rounded-[2px] bg-azure/30 border border-azure/40" />
-            {lang === "de" ? "Unsicherheit (P10–P90, 80 %)" : "Uncertainty (P10–P90, 80%)"}
+            <span className="w-4 h-[10px] rounded-[3px] bg-azure/25 border border-azure/40" />
+            {lang === "de"
+              ? "Spanne: hier landet die Zahl in 8 von 10 Monaten"
+              : "Range: the figure lands here in 8 out of 10 months"}
           </span>
         </div>
       </section>

@@ -166,13 +166,13 @@ function KundenPageInner() {
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-navy-800">
                 {lang === "de"
-                  ? `Region „${gebiet}“ – keine Regionsdaten in diesem Auszug`
-                  : `Region "${gebiet}" – no region data in this extract`}
+                  ? `Region „${gebiet}“ – nicht in diesem Auszug enthalten`
+                  : `Region "${gebiet}" – not included in this extract`}
               </p>
               <p className="text-[12.5px] text-ink-2 mt-0.5 leading-relaxed">
                 {lang === "de"
-                  ? "Die Cockpit-Regionen stammen aus der Modellrechnung (Demo-Stamm) und passen nicht auf echte Kundennummern. Filtern Sie stattdessen nach Branche, Suche oder Sortierung."
-                  : "Cockpit regions come from the model (demo data) and don't map to real customer numbers. Filter by industry, search or sorting instead."}
+                  ? "Dieser Auszug enthält keine Regionen – filtern Sie stattdessen nach Branche, Suche oder Sortierung."
+                  : "This extract contains no regions – filter by industry, search, or sorting instead."}
               </p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">

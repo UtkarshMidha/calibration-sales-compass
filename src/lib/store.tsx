@@ -299,15 +299,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSelectedKunde(null);
   }, []);
 
-  const tagesliste = useMemo(
-    () =>
-      getTagesliste(state.stichtag, state.settings, {
-        ergebnisse: state.ergebnisse,
-        wiedervorlagen: state.wiedervorlagen,
-        done: state.done,
-      }),
-    [state.stichtag, state.settings, state.ergebnisse, state.wiedervorlagen, state.done],
-  );
+  /* Tages-Fixierung: die 12 des Tages stehen fest. Erledigte verschwinden
+   * (12 → 10 bei 2 done), es rücken keine neuen nach. Deterministisch aus
+   * (Stichtag, Einstellungen) abgeleitet – kein Extra-State nötig.
+   * Prioritäten bleiben die des Tages (kein Nachrutschen in den Bändern). */
+  const tagesliste = useMemo(() => {
+    const EMPTY: {
+      ergebnisse: Record<string, { am: string }>;
+      wiedervorlagen: Record<string, string>;
+      done: Record<string, string>;
+    } = { ergebnisse: {}, wiedervorlagen: {}, done: {} };
+    const tag = getTagesliste(state.stichtag, state.settings, EMPTY);
+    const prio = new Map(tag.map((i) => [i.kundeId, i.prioritaet]));
+    return getTagesliste(state.stichtag, state.settings, {
+      ergebnisse: state.ergebnisse,
+      wiedervorlagen: state.wiedervorlagen,
+      done: state.done,
+    })
+      .filter((i) => prio.has(i.kundeId))
+      .map((i) => ({ ...i, prioritaet: prio.get(i.kundeId) ?? i.prioritaet }));
+  }, [state.stichtag, state.settings, state.ergebnisse, state.wiedervorlagen, state.done]);
 
   /* ---- quotes ---- */
   const createDraft = useCallback(

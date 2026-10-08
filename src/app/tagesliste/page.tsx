@@ -91,23 +91,26 @@ export default function HeutePage() {
     [list, filters, query, app.claims, app.user.id],
   );
 
-  const selectedId = app.selectedKunde ?? filtered[0]?.kundeId ?? null;
-  const selectedItem = list.find((i) => i.kundeId === selectedId) ?? filtered[0] ?? null;
+  /* Erledigte verschwinden aus der offenen Liste (der Done-Tab zeigt sie separat). */
+  const openList = useMemo(() => filtered.filter((i) => !app.done[i.kundeId]), [filtered, app.done]);
+
+  const selectedId = app.selectedKunde ?? openList[0]?.kundeId ?? null;
+  const selectedItem = list.find((i) => i.kundeId === selectedId) ?? openList[0] ?? null;
   const kunde = selectedItem ? getKunde(selectedItem.kundeId) : undefined;
 
   useEffect(() => {
-    if (!app.selectedKunde && filtered[0]) app.setSelectedKunde(filtered[0].kundeId);
-  }, [filtered, app]);
+    if (!app.selectedKunde && openList[0]) app.setSelectedKunde(openList[0].kundeId);
+  }, [openList, app]);
 
   /* ---- keyboard triage ---- */
   const move = useCallback(
     (delta: number) => {
-      if (filtered.length === 0) return;
-      const idx = filtered.findIndex((i) => i.kundeId === selectedId);
-      const next = filtered[Math.min(filtered.length - 1, Math.max(0, (idx === -1 ? 0 : idx) + delta))];
+      if (openList.length === 0) return;
+      const idx = openList.findIndex((i) => i.kundeId === selectedId);
+      const next = openList[Math.min(openList.length - 1, Math.max(0, (idx === -1 ? 0 : idx) + delta))];
       if (next) app.setSelectedKunde(next.kundeId);
     },
-    [filtered, selectedId, app],
+    [openList, selectedId, app],
   );
 
   const finish = useCallback(
@@ -119,11 +122,11 @@ export default function HeutePage() {
         app.erledigt(id, code, opts);
         setLeaving(null);
         app.toast(t("toast.erledigt"), { actionLabel: t("toast.rueckgaengig"), action: () => app.undo(id) });
-        const rest = filtered.filter((i) => i.kundeId !== id);
+        const rest = openList.filter((i) => i.kundeId !== id);
         app.setSelectedKunde(rest[0]?.kundeId ?? null);
       }, 260);
     },
-    [selectedItem, app, t, filtered],
+    [selectedItem, app, t, openList],
   );
 
   const claimIt = useCallback(() => {
@@ -176,7 +179,7 @@ export default function HeutePage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [move, claimIt, openEmail, openQuote, selectedItem, ergebnisOpen, emailOpen, spaeterOpen]);
 
-  const high = list.filter((i) => i.prioritaet === "hoch").length;
+  const high = openList.filter((i) => i.prioritaet === "hoch").length;
   const doneCount = Object.keys(app.done).length;
   const doneItems = useMemo(
     () =>
@@ -190,7 +193,7 @@ export default function HeutePage() {
         .sort((a, b) => a.kundeId.localeCompare(b.kundeId)),
     [app.done, app.ergebnisse, app.wiedervorlagen, app.stichtag, app.settings],
   );
-  const top = list[0];
+  const top = openList[0];
   const topKunde = top ? getKunde(top.kundeId) : undefined;
   const activeFilters = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
 
@@ -212,8 +215,8 @@ export default function HeutePage() {
                 </strong>{" "}
                 <span className="text-ink-2">
                   {lang === "de"
-                    ? `${list.length} Empfehlungen für heute, davon ${high} mit hoher Priorität.`
-                    : `${list.length} recommendations for today, ${high} of them high priority.`}
+                    ? `${openList.length} Empfehlungen für heute, davon ${high} mit hoher Priorität.`
+                    : `${openList.length} recommendations for today, ${high} of them high priority.`}
                 </span>
                 {topKunde && (
                   <span className="text-ink-2">
@@ -286,7 +289,7 @@ export default function HeutePage() {
         )}
         <div className="flex-1" />
         <span className="text-[12px] text-ink-3 tnum">
-          {filtered.length} / {list.length} {lang === "de" ? "Empfehlungen" : "recommendations"}
+          {openList.length} / {list.length - doneCount} {lang === "de" ? "Empfehlungen" : "recommendations"}
         </span>
       </div>
       )}
@@ -304,7 +307,7 @@ export default function HeutePage() {
                   ansicht === "offen" ? "bg-navy-800 text-white" : "text-ink-3 hover:text-ink",
                 )}
               >
-                {lang === "de" ? "Offen" : "Open"} <span className="tnum opacity-70">{filtered.length}</span>
+                {lang === "de" ? "Offen" : "Open"} <span className="tnum opacity-70">{openList.length}</span>
               </button>
               <button
                 onClick={() => setAnsicht("erledigt")}
@@ -359,10 +362,10 @@ export default function HeutePage() {
 
           {ansicht === "offen" ? (
           <div className="divide-y divide-[var(--color-line)]">
-            {filtered.length === 0 && (
+            {openList.length === 0 && (
               <EmptyState
-                title={list.length === 0 ? t("heute.allesErledigt") : t("heute.leerFilter")}
-                hint={list.length === 0 ? t("heute.wiedervorlagen") : undefined}
+                title={!activeFilters && !query ? t("heute.allesErledigt") : t("heute.leerFilter")}
+                hint={!activeFilters && !query ? t("heute.wiedervorlagen") : undefined}
                 action={
                   activeFilters || query ? (
                     <Btn onClick={() => { setFilters(EMPTY_FILTERS); setQuery(""); }}>{t("heute.filterZuruecksetzen")}</Btn>
@@ -370,7 +373,7 @@ export default function HeutePage() {
                 }
               />
             )}
-            {filtered.map((item) => {
+            {openList.map((item) => {
               const k = getKunde(item.kundeId)!;
               const isSel = item.kundeId === selectedId;
               const claim = app.claims[item.kundeId];
