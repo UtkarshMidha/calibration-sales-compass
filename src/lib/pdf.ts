@@ -56,7 +56,7 @@ const T = (lang: Lang) =>
         subject: (n: number, branche: string, ort: string) =>
           `Kalibrierung Ihrer ${n} fälligen bzw. überfälligen Messmittel`,
         body: (n: number, branche: string, ort: string) =>
-          `vielen Dank für Ihr Vertrauen. Für Ihre ${n} fälligen bzw. überfälligen Messmittel (${branche}, ${ort}) bieten wir die Kalibrierung wie folgt an. Die Prüfungsart können Sie je Position umstellen – ab 01.01.2026 gilt die DAkkS-Kalibrierung (Deutsche Akkreditierungsstelle, staatlich akkreditiert) als Standard.`,
+          `vielen Dank für Ihr Vertrauen. Für Ihre ${n} fälligen bzw. überfälligen Messmittel (${branche}, ${ort}) bieten wir die Kalibrierung wie folgt an. Ab 01.01.2026 gilt die DAkkS-Kalibrierung (Deutsche Akkreditierungsstelle, staatlich akkreditiert) als Standard.`,
         positions: "Positionen",
         pos: "Pos.",
         service: "Leistung",
@@ -101,7 +101,7 @@ const T = (lang: Lang) =>
         subject: (n: number, branche: string, ort: string) =>
           `Calibration of your ${n} due or overdue instruments`,
         body: (n: number, branche: string, ort: string) =>
-          `thank you for your trust. For your ${n} due or overdue instruments (${branche}, ${ort}) we offer the calibration as follows. You can change the test type per line – since 01/01/2026 DAkkS calibration (German accreditation body, state-accredited) is the standard.`,
+          `thank you for your trust. For your ${n} due or overdue instruments (${branche}, ${ort}) we offer the calibration as follows. Since 01/01/2026 DAkkS calibration (German accreditation body, state-accredited) is the standard.`,
         positions: "Lines",
         pos: "Pos.",
         service: "Service",

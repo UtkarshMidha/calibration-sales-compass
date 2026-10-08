@@ -61,6 +61,18 @@ export function AssistantDrawer() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing, app.assistantOpen]);
 
+  /* golden-set "Try": Developer tab dispatches the question, drawer asks it */
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const q = (e as CustomEvent<string>).detail;
+      if (!q || typeof q !== "string") return;
+      app.setAssistantOpen(true);
+      send(q);
+    };
+    window.addEventListener("pecal-ask", onAsk);
+    return () => window.removeEventListener("pecal-ask", onAsk);
+  });
+
   const resetHistory = () => {
     setMessages([]);
     try {

@@ -97,10 +97,10 @@ export default function AngebotPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="page grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start">
+    <div className="h-full overflow-y-auto xl:overflow-hidden print:h-auto print:overflow-visible">
+      <div className="page grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 xl:gap-5 xl:h-full xl:min-h-0">
         {/* ============ document sheet ============ */}
-        <div className="print-root">
+        <div className="print-root pane-scroll min-w-0 xl:min-h-0 xl:overflow-y-auto xl:pb-6 print:overflow-visible">
           <div className="flex items-center gap-2 mb-3 no-print">
             <Link
               href="/"
@@ -351,8 +351,8 @@ export default function AngebotPage() {
           </div>
         </div>
 
-        {/* ============ side panel ============ */}
-        <aside className="space-y-3 no-print xl:sticky xl:top-0 anim-fade-up">
+        {/* ============ side panel (own scroll on desktop) ============ */}
+        <aside className="pane-scroll space-y-3 no-print min-w-0 xl:min-h-0 xl:overflow-y-auto xl:pb-6 anim-fade-up">
           <div className="card p-4">
             <p className="section-label">
               {t("angebot.gesamt")} {lang === "de" ? "netto" : "net"}

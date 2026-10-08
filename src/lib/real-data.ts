@@ -175,3 +175,55 @@ export function usePotenzial(): { data: Potenzial | null } {
   }, []);
   return { data };
 }
+
+export interface KartenChartData {
+  buckets?: { bucket: string; anteil: number }[];
+  points?: { k: number; modell: number; baseline: number }[];
+  series?: { label: string; actual: number; modell: number; baseline: number }[];
+  bars?: { label: string; v: number }[];
+}
+
+export interface RealModellguete {
+  generated_at: string;
+  tables: string[];
+  cutoff: string;
+  outcome_window_days: number;
+  history_days: number;
+  n_customers: number;
+  n_train: number;
+  n_test: number;
+  churn_rate: number;
+  test_churn_rate: number;
+  models: { id: string; roc_auc: number; pr_auc: number; precision_at_50: number; precision_at_100: number; precision_at_200: number }[];
+  calibration: { bin: number; predicted: number; observed: number; n: number }[];
+  importances: { feature: string; value: number }[];
+  note: string;
+  cards?: {
+    id: string;
+    titel: string;
+    was: { de: string; en: string };
+    metrikName: string;
+    wertLabel: string;
+    baselineName: string;
+    baselineLabel: string;
+    ziel: string;
+    erfuellt: boolean;
+    bedeutet: { de: string; en: string };
+    chart: string;
+    chartData: KartenChartData;
+  }[];
+}
+
+export function useModellgueteReal(): { data: RealModellguete | null } {
+  const [data, setData] = useState<RealModellguete | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetchJson<RealModellguete>("/data/modellguete-real.json").then((d) => {
+      if (live && d) setData(d);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return { data };
+}
