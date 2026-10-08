@@ -97,7 +97,7 @@ export function answer(question: string, ctx: AnswerCtx): Part[] {
     return [
       { type: "text", text },
       { type: "empfehlungen", items: top },
-      { type: "quelle", text: t("assistent.quelle", { datum: date(ctx.stichtag, loc) }) },
+      { type: "quelle", text: t("assistent.quelle", { datum: date(ctx.stichtag, loc), date: date(ctx.stichtag, loc) }) },
     ];
   }
 
@@ -123,7 +123,7 @@ export function answer(question: string, ctx: AnswerCtx): Part[] {
         ],
       },
       { type: "confirm", kind: "email", kundeId: k.id, label: lang === "de" ? "E-Mail-Entwurf für diesen Kunden" : "Email draft for this customer" },
-      { type: "quelle", text: t("assistent.quelle", { datum: ctx.stichtag }) },
+      { type: "quelle", text: t("assistent.quelle", { datum: date(ctx.stichtag, loc), date: date(ctx.stichtag, loc) }) },
     ];
   }
 
@@ -177,29 +177,76 @@ export function answer(question: string, ctx: AnswerCtx): Part[] {
   /* --- industry gaps --- */
   if (/(lück|lücken|potenzial|gap|portfolio|branchen)/.test(s)) {
     const id = findKundeId(s, ctx);
-    if (!id) return [{ type: "text", text: t("assistent.keineAntwort") }];
-    const k = getKunde(id)!;
-    const luecken = getLuecken(id).filter((l) => l.stunden > 0).slice(0, 4);
-    if (luecken.length === 0) {
-      return [{ type: "text", text: `${k.name}: ${t("k360.keineLuecke")}` }];
+    if (id) {
+      const k = getKunde(id)!;
+      const luecken = getLuecken(id).filter((l) => l.stunden > 0).slice(0, 4);
+      if (luecken.length === 0) {
+        return [{ type: "text", text: `${k.name}: ${t("k360.keineLuecke")}` }];
+      }
+      const text =
+        lang === "de"
+          ? `Bei ${k.name} fehlen ${luecken.length} Gruppen, die ${Math.round(luecken[0].peer * 100)} % der Branche ${k.branche} bei uns kalibrieren – größte Lücke: ${GRUPPEN[luecken[0].gruppe].name}, Wert ≈ ${euro(luecken.reduce((x, l) => x + l.stunden * ctx.settings.stundensatz, 0), loc)}.`
+          : `${k.name} is missing ${luecken.length} groups that ${Math.round(luecken[0].peer * 100)}% of ${k.branche} peers calibrate with us – biggest gap: ${GRUPPEN[luecken[0].gruppe].name}, value ≈ ${euro(luecken.reduce((x, l) => x + l.stunden * ctx.settings.stundensatz, 0), loc)}.`;
+      return [
+        { type: "text", text },
+        {
+          type: "messmittel",
+          titel: t("k360.luecken"),
+          rows: luecken.map((l) => ({
+            ident: GRUPPEN[l.gruppe].kuerzel,
+            typ: GRUPPEN[l.gruppe].name,
+            faelligkeit: `${Math.round(l.peer * 100)} % Peers`,
+            status: "gap",
+          })),
+        },
+        { type: "quelle", text: "M5 · Branchenpotenzial" },
+      ];
     }
+    /* kein Kunde im Kontext → gleiche Daten aggregiert: Top-Branchenlücken
+     * plus Top-Überfällige der größten Lücken-Branche als nächster Schritt */
+    const agg = new Map<string, { kunden: number; gruppen: number; wert: number }>();
+    for (const kk of getKunden()) {
+      const ls = getLuecken(kk.id).filter((l) => l.stunden > 0);
+      if (ls.length === 0) continue;
+      const w = ls.reduce((x, l) => x + l.stunden * ctx.settings.stundensatz, 0);
+      const e = agg.get(kk.branche) ?? { kunden: 0, gruppen: 0, wert: 0 };
+      e.kunden += 1;
+      e.gruppen += ls.length;
+      e.wert += w;
+      agg.set(kk.branche, e);
+    }
+    const top = [...agg.entries()].sort((a, b) => b[1].wert - a[1].wert).slice(0, 3);
+    if (top.length === 0) return [{ type: "text", text: t("k360.keineLuecke") }];
+    const topBranche = top[0][0];
+    const next = getKunden()
+      .filter((kk) => kk.branche === topBranche && kk.ueberfaellig > 0)
+      .sort((a, b) => b.ueberfaellig - a.ueberfaellig)
+      .slice(0, 3);
+    const rank = top
+      .map(([b, v], i) =>
+        lang === "de"
+          ? `${i + 1}. ${b} – ${v.gruppen} Lücken bei ${v.kunden} Kunden, ≈ ${euro(v.wert, loc)}`
+          : `${i + 1}. ${b} – ${v.gruppen} gaps at ${v.kunden} customers, ≈ ${euro(v.wert, loc)}`,
+      )
+      .join("; ");
     const text =
       lang === "de"
-        ? `Bei ${k.name} fehlen ${luecken.length} Gruppen, die ${Math.round(luecken[0].peer * 100)} % der Branche ${k.branche} bei uns kalibrieren – größte Lücke: ${GRUPPEN[luecken[0].gruppe].name}, Wert ≈ ${euro(luecken.reduce((x, l) => x + l.stunden * ctx.settings.stundensatz, 0), loc)}.`
-        : `${k.name} is missing ${luecken.length} groups that ${Math.round(luecken[0].peer * 100)}% of ${k.branche} peers calibrate with us – biggest gap: ${GRUPPEN[luecken[0].gruppe].name}, value ≈ ${euro(luecken.reduce((x, l) => x + l.stunden * ctx.settings.stundensatz, 0), loc)}.`;
+        ? `Ohne Kundenauswahl zeige ich die größten Branchenlücken: ${rank}. Für einzelne Kunden: Kunde in Tagesliste oder Kunden wählen – dann nenne ich die fehlenden Gruppen samt Wert. Nächster Schritt: Top-Überfällige in ${topBranche} anrufen.`
+        : `Without a selected customer, here are the biggest industry gaps: ${rank}. For individual customers: select one in the daily list or customers – then I name the missing groups with values. Next step: call the most overdue in ${topBranche}.`;
     return [
       { type: "text", text },
       {
-        type: "messmittel",
-        titel: t("k360.luecken"),
-        rows: luecken.map((l) => ({
-          ident: GRUPPEN[l.gruppe].kuerzel,
-          typ: GRUPPEN[l.gruppe].name,
-          faelligkeit: `${Math.round(l.peer * 100)} % Peers`,
-          status: "gap",
+        type: "kunden",
+        items: next.map((kk) => ({
+          id: kk.id,
+          name: kk.name,
+          branche: kk.branche,
+          gebiet: kk.gebiet,
+          ueberfaellig: kk.ueberfaellig,
+          risiko: kk.risiko,
         })),
       },
-      { type: "quelle", text: "M5 · Branchenpotenzial" },
+      { type: "quelle", text: "M5 · Branchenpotenzial (aggregiert)" },
     ];
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { Check, ChevronRight, Send, Trash2, X } from "lucide-react";
+import { CalendarClock, Check, ChevronRight, Info, Layers, MapPin, Phone, Send, ShieldCheck, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { answer, SUGGESTIONS, type ChatMessage, type Part } from "@/lib/assistant";
@@ -10,9 +10,13 @@ import { date, euro, num } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { buildEmail } from "@/lib/content";
 import { useApp } from "@/lib/store";
-import { ANLASS_TONE, Btn, Chip, Sparkline } from "./ui";
+import { ANLASS_TONE, Btn, Chip, PeCalMark, Sparkline } from "./ui";
 
 const ASSISTANT_STORAGE_KEY = "pecal-assistant-v1";
+
+/* suggestion icons follow the fixed SUGGESTIONS order:
+ * call first · why on list · December volume · region South · industry gaps */
+const SUGGESTION_ICONS = [Phone, Info, CalendarClock, MapPin, Layers] as const;
 
 function loadAssistantHistory(): ChatMessage[] {
   try {
@@ -180,57 +184,82 @@ export function AssistantDrawer() {
       aria-hidden={!open}
       className={`fixed right-0 top-0 bottom-0 w-full sm:w-[420px] z-[65] bg-surface-0 border-l border-line shadow-pop flex flex-col no-print transition-transform duration-200 ease-out ${open ? "translate-x-0" : "translate-x-full pointer-events-none"}`}
     >
-      <header className="px-4 py-3 border-b border-line flex items-start gap-3">
-        <span className="w-8 h-8 rounded-[9px] bg-gradient-to-br from-brand to-brand-700 grid place-items-center shrink-0 shadow-[0_3px_10px_-3px_rgba(255,112,0,.7)]">
-          <span className="w-1.5 h-1.5 rounded-full bg-white" />
-        </span>
+      <header className="px-4 py-3 border-b border-line flex items-center gap-3">
+        <PeCalMark size={34} />
         <div className="flex-1 min-w-0">
           <h2 className="text-[14px] font-bold text-navy-800 leading-tight">{t("assistent.titel")}</h2>
-          <p className="text-[11.5px] text-ink-3 leading-tight">{t("assistent.unter")}</p>
+          <p className="text-[11.5px] text-ink-3 leading-tight truncate">{t("assistent.unter")}</p>
         </div>
         <button
           onClick={resetHistory}
           title={lang === "de" ? "Verlauf löschen" : "Clear history"}
           aria-label={lang === "de" ? "Verlauf löschen" : "Clear history"}
-          className="p-1.5 text-ink-3 hover:text-critical hover:bg-surface-1 rounded-[7px] transition-colors"
+          className="p-1.5 text-ink-3 hover:text-critical hover:bg-surface-1 rounded-[8px] transition-colors"
         >
           <Trash2 size={15} />
         </button>
-        <button onClick={() => app.setAssistantOpen(false)} aria-label={t("common.schliessen")} className="p-1 text-ink-3 hover:text-ink">
+        <button
+          onClick={() => app.setAssistantOpen(false)}
+          aria-label={t("common.schliessen")}
+          className="p-1.5 text-ink-3 hover:text-ink hover:bg-surface-1 rounded-[8px] transition-colors"
+        >
           <X size={16} />
         </button>
       </header>
 
       <div className="px-3 py-2 border-b border-line flex items-center gap-2 bg-surface-1 flex-wrap">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3 shrink-0">{t("assistent.kontext")}</span>
+        <span className="section-label shrink-0">{t("assistent.kontext")}</span>
         <Chip tone="navy" className="max-w-[230px] truncate">{ctxLabel}</Chip>
         <Chip tone="brand" className="shrink-0">{date(app.stichtag, lang === "de" ? "de-DE" : "en-GB")}</Chip>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3.5 py-4 space-y-4">
         {messages.length === 0 && (
-          <div className="space-y-3">
-            <p className="text-[13px] text-ink-2 leading-relaxed">
-              {lang === "de"
-                ? "Ich beantworte Fragen ausschließlich aus den berechneten Daten. Zahlen, die ich nenne, stammen aus der Tagesliste, dem Kundenstamm oder der Prognose."
-                : "I answer strictly from the computed data. Every figure I mention comes from the daily list, the customer base or the forecast."}
-            </p>
-            <p className="text-[11.5px] text-ink-3 leading-relaxed">
-              {lang === "de"
-                ? "Fragen ohne passenden Kennzahlen-Router beantwortet das Sprachmodell (Groq · gpt-oss) – ebenfalls nur aus diesem Datenstand."
-                : "Questions without a matching figure router are answered by the language model (Groq · gpt-oss) – still only from this data snapshot."}
-            </p>
-            <p className="text-[10.5px] font-bold uppercase tracking-wider text-ink-3">{t("assistent.vorschlaege")}</p>
-            <div className="flex flex-col gap-1.5">
-              {SUGGESTIONS(t).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => send(s)}
-                  className="text-left text-[13px] px-3 py-2 rounded-[9px] border border-line bg-surface-0 hover:border-brand-700 hover:bg-brand-50 transition-colors"
-                >
-                  {s}
-                </button>
-              ))}
+          <div className="space-y-4 anim-fade-up">
+            <div className="ai-panel p-4 space-y-2">
+              <p className="flex items-center gap-1.5">
+                <PeCalMark size={22} />
+                <span className="ai-chip">✦ {lang === "de" ? "KI-Assistent" : "AI assistant"}</span>
+              </p>
+              <p className="text-[13px] font-semibold text-navy-800 leading-snug">
+                {lang === "de"
+                  ? "Ich beantworte Fragen ausschließlich aus den berechneten Daten."
+                  : "I answer strictly from the computed data."}
+              </p>
+              <p className="text-[12.5px] text-ink-2 leading-relaxed">
+                {lang === "de"
+                  ? "Zahlen, die ich nenne, stammen aus der Tagesliste, dem Kundenstamm oder der Prognose."
+                  : "Every figure I mention comes from the daily list, the customer base or the forecast."}
+              </p>
+              <p className="flex items-start gap-1.5 text-[11.5px] text-ink-3 leading-relaxed pt-1 border-t border-ai-border">
+                <ShieldCheck size={13} className="shrink-0 mt-px" />
+                <span>
+                  {lang === "de"
+                    ? "Fragen ohne passenden Kennzahlen-Router beantwortet das Sprachmodell (Groq · gpt-oss) – ebenfalls nur aus diesem Datenstand."
+                    : "Questions without a matching figure router are answered by the language model (Groq · gpt-oss) – still only from this data snapshot."}
+                </span>
+              </p>
+            </div>
+            <div>
+              <p className="section-label mb-2">{t("assistent.vorschlaege")}</p>
+              <div className="flex flex-col gap-1.5">
+                {SUGGESTIONS(t).map((s, i) => {
+                  const Icon = SUGGESTION_ICONS[i] ?? Info;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => send(s)}
+                      className="group flex items-center gap-2.5 text-left px-2.5 py-2 rounded-[8px] border border-line bg-surface-0 hover:border-ai hover:bg-white transition-colors"
+                    >
+                      <span className="w-7 h-7 rounded-[8px] bg-ai-bg text-ai grid place-items-center shrink-0">
+                        <Icon size={14} />
+                      </span>
+                      <span className="flex-1 min-w-0 text-[13px] text-ink leading-snug">{s}</span>
+                      <ChevronRight size={14} className="shrink-0 text-ink-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -238,7 +267,7 @@ export function AssistantDrawer() {
         {messages.map((m) => (
           <div key={m.id} className={clsx("flex", m.role === "user" ? "justify-end" : "justify-start")}>
             {m.role === "user" ? (
-              <p className="max-w-[85%] bg-navy-800 text-white text-[13.5px] rounded-[12px_12px_3px_12px] px-3.5 py-2.5 leading-snug">
+              <p className="max-w-[85%] bg-navy-800 text-white text-[13px] rounded-[12px] rounded-br-[4px] px-3.5 py-2.5 leading-snug">
                 {m.parts.map((p, i) => (p.type === "text" ? <span key={i}>{p.text}</span> : null))}
               </p>
             ) : (
@@ -253,9 +282,9 @@ export function AssistantDrawer() {
 
         {typing && (
           <div className="flex items-center gap-1.5 text-ink-3 text-[12.5px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-brand animate-[pulse-soft_1s_ease-in-out_infinite]" />
-            <span className="w-1.5 h-1.5 rounded-full bg-brand/70 animate-[pulse-soft_1s_ease-in-out_.2s_infinite]" />
-            <span className="w-1.5 h-1.5 rounded-full bg-brand/40 animate-[pulse-soft_1s_ease-in-out_.4s_infinite]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-ai animate-[pulse-soft_1s_ease-in-out_infinite]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-ai/70 animate-[pulse-soft_1s_ease-in-out_.2s_infinite]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-ai/40 animate-[pulse-soft_1s_ease-in-out_.4s_infinite]" />
             <span className="ml-1">…</span>
           </div>
         )}
@@ -266,14 +295,13 @@ export function AssistantDrawer() {
           e.preventDefault();
           send(input);
         }}
-        className="assistant-box p-3 border-t border-line flex items-end gap-2 focus-within:[&>input]:border-[#2563eb]"
+        className="assistant-box p-3 border-t border-line flex items-end gap-2 focus-within:[&>input]:border-action"
       >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={t("assistent.placeholder")}
-          style={{ outline: "none" }}
-          className="flex-1 min-w-0 h-[38px] px-3 rounded-[9px] border border-line bg-surface-1 focus:bg-surface-0 focus:border-[#2563eb] text-[13.5px] placeholder:text-ink-3 placeholder:truncate transition-colors"
+          className="flex-1 min-w-0 h-[38px] px-3 rounded-[8px] border border-line bg-surface-1 outline-none focus:bg-surface-0 focus:border-action text-[13.5px] placeholder:text-ink-3 placeholder:truncate transition-colors"
         />
         <Btn variant="primary" type="submit" aria-label={lang === "de" ? "Senden" : "Send"} disabled={!input.trim()} className="shrink-0">
           <Send size={14} />
@@ -328,26 +356,28 @@ function PartView({ part }: { part: Part }) {
   if (part.type === "kunden")
     return (
       <div className="card overflow-hidden">
-        <table className="w-full text-[12.5px]">
-          <tbody>
-            {part.items.map((k) => (
-              <tr
-                key={k.id}
-                onClick={() => router.push(`/kunden/${k.id}`)}
-                className="cursor-pointer border-b border-line last:border-0 hover:bg-surface-1"
-              >
-                <td className="px-2.5 py-2 font-semibold text-ink">{k.name}</td>
-                <td className="px-1 py-2 text-ink-3 whitespace-nowrap">{k.branche}</td>
-                <td className="px-1 py-2 text-right tnum text-overdue font-semibold whitespace-nowrap">
-                  {num(k.ueberfaellig)} ✓
-                </td>
-                <td className="px-2.5 py-2 text-right tnum text-ink-2 whitespace-nowrap">
+        <div className="divide-y divide-[var(--color-line)]">
+          {part.items.map((k) => (
+            <button
+              key={k.id}
+              onClick={() => router.push(`/kunden/${k.id}`)}
+              className="w-full text-left px-3 py-2 hover:bg-surface-1 transition-colors"
+            >
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 font-semibold text-ink text-[13px] leading-snug">{k.name}</span>
+                <span className="shrink-0 tnum text-[12.5px] font-semibold text-overdue whitespace-nowrap">
+                  {num(k.ueberfaellig)} <Check size={13} className="inline-block" />
+                </span>
+              </span>
+              <span className="mt-0.5 flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate text-[12px] text-ink-3">{k.branche}</span>
+                <span className="shrink-0 tnum text-[12px] text-ink-2 whitespace-nowrap">
                   {k.EV != null ? euro(k.EV, loc) : `${Math.round(k.risiko * 100)} %`}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     );
 
@@ -403,9 +433,6 @@ function PartView({ part }: { part: Part }) {
             }}
           >
             <Check size={13} /> {t("assistent.bestaetigen")}
-          </Btn>
-          <Btn variant="ghost" size="sm">
-            {t("assistent.verwerfen")}
           </Btn>
         </div>
       </div>

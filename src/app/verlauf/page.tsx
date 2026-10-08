@@ -17,6 +17,7 @@ import {
 import { date, euro, num } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { usePotenzial, useVerlauf } from "@/lib/real-data";
+import { useApp } from "@/lib/store";
 
 const MK: Record<string, { de: string; en: string }> = {
   "01": { de: "Jan", en: "Jan" }, "02": { de: "Feb", en: "Feb" },
@@ -33,6 +34,7 @@ type PotTab = "kommend" | "portal" | "luecken";
 export default function VerlaufPage() {
   const { lang } = useI18n();
   const loc = lang === "de" ? "de-DE" : "en-GB";
+  const app = useApp();
   const { monate } = useVerlauf();
   const { data: pot } = usePotenzial();
   const [tab, setTab] = useState<ChartTab>("churn");
@@ -41,11 +43,16 @@ export default function VerlaufPage() {
 
   const short = (key: string) => `${MK[key.slice(5, 7)]?.[lang] ?? key.slice(5)} ${key.slice(2, 4)}`;
 
-  const chartData = useMemo(
-    () => (monate ?? []).map((m) => ({ ...m, label: short(m.monat) })),
+  /* Abwanderung ist erst ~6 Monate später sicher (Stille ≠ Churn).
+   * Monate danach sind nicht aussagekräftig und werden im Churn-Tab
+   * ausgeblendet, statt die kumulierte Linie flach ins Leere zu ziehen. */
+  const churnCutoff = useMemo(() => shiftMonthKey(app.stichtag.slice(0, 7), -6), [app.stichtag]);
+
+  const chartData = useMemo(() => {
+    const base = (monate ?? []).map((m) => ({ ...m, label: short(m.monat) }));
+    return tab === "churn" ? base.filter((m) => m.monat <= churnCutoff) : base;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [monate, lang],
-  );
+  }, [monate, lang, tab, churnCutoff]);
 
   const selected = useMemo(() => {
     if (!monate || monate.length === 0) return null;
@@ -102,12 +109,12 @@ export default function VerlaufPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="px-5 py-4 max-w-[1400px] mx-auto space-y-4">
+      <div className="page space-y-4">
         <div>
-          <h1 className="text-[20px] font-extrabold tracking-tight text-slate-900">
+          <h1 className="page-title">
             {lang === "de" ? "Verlauf" : "History"}
           </h1>
-          <p className="text-[13px] text-slate-500">
+          <p className="page-sub">
             {lang === "de"
               ? "Abwanderung bisher · Potenzial als Nächstes. Stand 25.09.2026 – Monat anklicken für Details."
               : "Churn so far · potential next. As of 25/09/2026 – click a month for details."}
@@ -120,21 +127,21 @@ export default function VerlaufPage() {
             return (
               <div key={k.label} className="card kpi p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <span className={`w-10 h-10 rounded-xl ${k.bg} grid place-items-center shrink-0`}>
-                    <Icon size={18} className={k.fg} />
+                  <span className={`w-9 h-9 rounded-[8px] ${k.bg} grid place-items-center shrink-0`}>
+                    <Icon size={17} className={k.fg} />
                   </span>
                 </div>
-                <p className="text-[11.5px] font-semibold text-slate-500 mt-3 leading-tight">{k.label}</p>
-                <p className="tnum text-[24px] font-extrabold text-slate-900 leading-tight tracking-tight">{k.value}</p>
-                <p className="text-[11.5px] text-slate-400 tnum">{k.sub}</p>
+                <p className="section-label mt-3 leading-tight">{k.label}</p>
+                <p className="tnum text-[24px] font-bold text-navy-800 leading-tight tracking-tight">{k.value}</p>
+                <p className="text-[12px] text-ink-3 tnum">{k.sub}</p>
               </div>
             );
           })}
         </div>
 
-        <section className="card p-4 anim-fade-up">
+        <section className="card p-5 anim-fade-up">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <div className="inline-flex items-center gap-1 rounded-xl bg-slate-100 border border-slate-200 p-1">
+            <div className="inline-flex items-center gap-1 rounded-[8px] bg-surface-1 border border-line p-1">
               <TabBtn active={tab === "churn"} onClick={() => setTab("churn")}>
                 {lang === "de" ? "Abwanderung" : "Churn"}
               </TabBtn>
@@ -143,45 +150,31 @@ export default function VerlaufPage() {
               </TabBtn>
             </div>
             <div className="flex-1" />
-            <span className="text-[11.5px] text-slate-400">
+            <span className="text-[11.5px] text-ink-3">
               {lang === "de" ? "Balken/Segment anklicken → Details unten" : "Click a bar/segment → details below"}
             </span>
           </div>
-          <p className="text-[12px] text-slate-500 mb-2 leading-relaxed">
+          <p className="text-[12px] text-ink-2 mb-2 leading-relaxed">
             {tab === "churn"
               ? (lang === "de"
-                ? "Balken: in diesem Monat abgewanderte Kunden. Linie: kumuliert abgewanderte Kunden. Nur Monate mit ≥ 6 Monaten Abstand sind aussagekräftig – jüngere Monate können noch zurückkehren."
-                : "Bars: customers who churned that month. Line: cumulative churned customers. Only months 6+ months back are conclusive – recent months may still return.")
+                ? "Balken: in diesem Monat abgewanderte Kunden. Linie: kumuliert abgewanderte Kunden. Nur Monate mit ≥ 6 Monaten Abstand sind aussagekräftig – jüngere Monate werden daher ausgeblendet."
+                : "Bars: customers who churned that month. Line: cumulative churned customers. Only months 6+ months back are conclusive – more recent months are hidden for that reason.")
               : (lang === "de"
                 ? "Balken: Kalibrierungen je Monat. Linie: aktive Kunden je Monat – das Grundrauschen, gegen das Stilllegung auffällt."
                 : "Bars: calibrations per month. Line: active customers per month – the baseline against which silence stands out.")}
           </p>
           <div className="h-[240px]">
             {!monate ? (
-              <div className="h-full rounded-xl bg-slate-50 animate-pulse" />
+              <div className="h-full rounded-[8px] bg-surface-2 animate-pulse" />
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData} margin={{ top: 14, right: 8, left: -8, bottom: 0 }} onClick={pickMonth} style={{ cursor: "pointer" }}>
-                  <defs>
-                    <linearGradient id="v-churn" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f87171" />
-                      <stop offset="100%" stopColor="#dc2626" />
-                    </linearGradient>
-                    <linearGradient id="v-kal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#60a5fa" />
-                      <stop offset="100%" stopColor="#2563eb" />
-                    </linearGradient>
-                    <linearGradient id="v-kum" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#1c3b51" />
-                      <stop offset="100%" stopColor="#ff7000" />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="2 4" stroke="#e2e8f0" vertical={false} />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} interval={2} />
-                  <YAxis yAxisId="left" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} width={44 }
+                  <CartesianGrid strokeDasharray="2 4" stroke="var(--color-line)" vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#6d7378" }} interval={2} />
+                  <YAxis yAxisId="left" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#6d7378" }} width={44 }
                     tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`)} />
-                  <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} width={40}
-                    tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`)} />
+                  <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#6d7378" }} width={44}
+                    tickFormatter={(v: number) => num(v, 0, loc)} />
                   <Tooltip
                     content={(p: unknown) => {
                       const { active, payload, label } = p as {
@@ -206,21 +199,21 @@ export default function VerlaufPage() {
                         </div>
                       );
                     }}
-                    cursor={{ fill: "rgba(37,99,235,.07)" }}
+                    cursor={{ fill: "rgba(28,59,81,.06)" }}
                   />
                   {tab === "churn" ? (
                     <>
-                      <Bar yAxisId="left" dataKey="neuStill" radius={[6, 6, 3, 3]} maxBarSize={30} isAnimationActive animationDuration={700}>
+                      <Bar yAxisId="left" dataKey="neuStill" radius={[6, 6, 2, 2]} maxBarSize={30} isAnimationActive animationDuration={700}>
                         {chartData.map((d, i) => (
-                          <Cell key={i} fill={d.monat === selected?.monat ? "#ff7000" : "url(#v-churn)"} />
+                          <Cell key={i} fill={d.monat === selected?.monat ? "var(--color-navy-800)" : "#dc2626"} fillOpacity={d.monat === selected?.monat ? 1 : 0.85} />
                         ))}
                       </Bar>
-                      <Line yAxisId="right" type="monotone" dataKey="stillKumuliert" stroke="url(#v-kum)" strokeWidth={2.6} dot={false} strokeLinecap="round" />
+                      <Line yAxisId="right" type="monotone" dataKey="stillKumuliert" stroke="var(--color-navy-800)" strokeWidth={2.6} dot={false} strokeLinecap="round" />
                     </>
                   ) : (
                     <>
-                      <Bar yAxisId="left" dataKey="kalibrierungen" radius={[6, 6, 3, 3]} maxBarSize={30} isAnimationActive animationDuration={700} fill="url(#v-kal)" />
-                      <Line yAxisId="right" type="monotone" dataKey="aktiveKunden" stroke="#10b981" strokeWidth={2.4} dot={false} strokeLinecap="round" />
+                      <Bar yAxisId="left" dataKey="kalibrierungen" radius={[6, 6, 2, 2]} maxBarSize={30} isAnimationActive animationDuration={700} fill="var(--color-azure)" />
+                      <Line yAxisId="right" type="monotone" dataKey="aktiveKunden" stroke="var(--color-ok)" strokeWidth={2.4} dot={false} strokeLinecap="round" />
                     </>
                   )}
                 </ComposedChart>
@@ -231,13 +224,13 @@ export default function VerlaufPage() {
 
         <section className="card overflow-hidden anim-fade-up">
           <header className="px-5 pt-4 pb-3 flex items-center gap-3 flex-wrap">
-            <div>
-              <h2 className="text-[15px] font-bold text-slate-900">
+            <div className="min-w-0">
+              <h2 className="text-[14px] font-bold text-navy-800">
                 {selected
                   ? (lang === "de" ? `Abgewandert im ${short(selected.monat)}` : `Churned in ${short(selected.monat)}`)
                   : (lang === "de" ? "Details" : "Details")}
               </h2>
-              <p className="text-[12.5px] text-slate-500">
+              <p className="text-[12.5px] text-ink-3 mt-0.5">
                 {selected && selected.top.length > 0
                   ? (lang === "de"
                     ? `${selected.neuStill} Kunden · Top nach Vorvolumen – anklicken für Kundenansicht`
@@ -250,28 +243,28 @@ export default function VerlaufPage() {
           </header>
           {selected && selected.top.length > 0 && (
             <div className="overflow-x-auto">
-              <table className="w-full text-[13px] min-w-[720px]">
+              <table className="tbl w-full text-[13px] min-w-[680px]">
                 <thead>
-                  <tr className="border-y border-slate-100 bg-slate-50/70 text-[10.5px] uppercase tracking-wider text-slate-400">
-                    <th className="text-left font-bold px-4 py-2">{lang === "de" ? "Kunde" : "Customer"}</th>
+                  <tr className="text-[11px]">
+                    <th className="text-left font-bold px-5 py-2">{lang === "de" ? "Kunde" : "Customer"}</th>
                     <th className="text-left font-bold px-2 py-2">{lang === "de" ? "Branche" : "Industry"}</th>
                     <th className="text-left font-bold px-2 py-2">{lang === "de" ? "Zuletzt aktiv" : "Last active"}</th>
                     <th className="text-right font-bold px-2 py-2">{lang === "de" ? "Volumen 6M" : "Volume 6M"}</th>
                     <th className="text-right font-bold px-2 py-2">{lang === "de" ? "Überfällig" : "Overdue"}</th>
-                    <th className="text-right font-bold px-4 py-2">{lang === "de" ? "Wert" : "Value"}</th>
+                    <th className="text-right font-bold px-5 py-2">{lang === "de" ? "Wert" : "Value"}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[var(--color-line)]">
                   {selected.top.map((r) => (
-                    <tr key={r.kunde} className="hover:bg-blue-50/40">
-                      <td className="px-4 py-2">
-                        <Link href={`/kunden/${r.kunde}`} className="tnum font-bold text-slate-900 hover:text-[#2563eb]">Kunde {r.kunde}</Link>
+                    <tr key={r.kunde}>
+                      <td className="px-5 py-2">
+                        <Link href={`/kunden/${r.kunde}`} className="tnum font-semibold text-navy-800 hover:text-action">Kunde {r.kunde}</Link>
                       </td>
-                      <td className="px-2 py-2 text-slate-500 max-w-[240px] truncate">{r.branche}</td>
-                      <td className="px-2 py-2 tnum text-slate-500">{r.letzteKal ? date(r.letzteKal, loc) : "–"}</td>
-                      <td className="px-2 py-2 text-right tnum text-slate-700">{num(r.volumen6m, 0, loc)}</td>
-                      <td className="px-2 py-2 text-right tnum font-semibold text-red-600">{r.ueberfaellig > 0 ? num(r.ueberfaellig, 0, loc) : "–"}</td>
-                      <td className="px-4 py-2 text-right tnum font-bold text-slate-900 whitespace-nowrap">{euro(r.wert, loc)}</td>
+                      <td className="px-2 py-2 text-ink-2 max-w-[240px] truncate">{r.branche}</td>
+                      <td className="px-2 py-2 tnum text-ink-2">{r.letzteKal ? date(r.letzteKal, loc) : "–"}</td>
+                      <td className="px-2 py-2 text-right tnum text-ink-2">{num(r.volumen6m, 0, loc)}</td>
+                      <td className="px-2 py-2 text-right tnum font-semibold text-overdue">{r.ueberfaellig > 0 ? num(r.ueberfaellig, 0, loc) : "–"}</td>
+                      <td className="px-5 py-2 text-right tnum font-bold text-navy-800 whitespace-nowrap">{euro(r.wert, loc)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -280,11 +273,11 @@ export default function VerlaufPage() {
           )}
         </section>
 
-        <section className="card p-4 anim-fade-up">
+        <section className="card p-5 anim-fade-up">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h2 className="text-[15px] font-bold text-slate-900">{lang === "de" ? "Potenzialkunden" : "Potential customers"}</h2>
+            <h2 className="text-[14px] font-bold text-navy-800">{lang === "de" ? "Potenzialkunden" : "Potential customers"}</h2>
             <div className="flex-1" />
-            <div className="inline-flex items-center gap-1 rounded-xl bg-slate-100 border border-slate-200 p-1">
+            <div className="inline-flex items-center gap-1 rounded-[8px] bg-surface-1 border border-line p-1">
               <TabBtn active={potTab === "kommend"} onClick={() => setPotTab("kommend")}>
                 {lang === "de" ? "Fällig demnächst" : "Due soon"}
               </TabBtn>
@@ -296,7 +289,7 @@ export default function VerlaufPage() {
               </TabBtn>
             </div>
           </div>
-          <p className="text-[12px] text-slate-500 mb-3 leading-relaxed">
+          <p className="text-[12.5px] text-ink-2 mb-3 leading-relaxed">
             {potTab === "kommend" && (lang === "de"
               ? "Fällig in 30 Tagen – jetzt anrufen und Abholung einplanen, bevor es überfällig wird."
               : "Due within 30 days – call now and schedule pickup before it goes overdue.")}
@@ -308,20 +301,20 @@ export default function VerlaufPage() {
               : "Instrument groups ≥ 40% of industry peers calibrate with us – but this customer doesn't.")}
           </p>
           {!pot ? (
-            <div className="h-24 rounded-xl bg-slate-50 animate-pulse" />
+            <div className="h-24 rounded-[8px] bg-surface-2 animate-pulse" />
           ) : (
-            <div className="overflow-x-auto -mx-4 px-4">
-              <table className="w-full text-[13px] min-w-[680px]">
+            <div className="overflow-x-auto">
+              <table className="tbl w-full text-[13px] min-w-[680px]">
                 <thead>
-                  <tr className="border-y border-slate-100 bg-slate-50/70 text-[10.5px] uppercase tracking-wider text-slate-400">
-                    <th className="text-left font-bold px-4 py-2">{lang === "de" ? "Kunde" : "Customer"}</th>
+                  <tr className="text-[11px]">
+                    <th className="text-left font-bold px-5 py-2">{lang === "de" ? "Kunde" : "Customer"}</th>
                     <th className="text-left font-bold px-2 py-2">{lang === "de" ? "Branche" : "Industry"}</th>
                     <th className="text-left font-bold px-2 py-2">{potTab === "kommend" ? (lang === "de" ? "Fällig" : "Due") : potTab === "portal" ? (lang === "de" ? "Aufträge" : "Orders") : (lang === "de" ? "Lücke" : "Gap")}</th>
                     <th className="text-right font-bold px-2 py-2">{lang === "de" ? "Wert" : "Value"}</th>
-                    <th className="text-right font-bold px-4 py-2" />
+                    <th className="text-right font-bold px-5 py-2"><span className="sr-only">{lang === "de" ? "Öffnen" : "Open"}</span></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[var(--color-line)]">
                   {potTab === "kommend" && pot.kommend.map((r) => (
                     <PotRow key={r.kunde} kunde={r.kunde} branche={r.branche} metric={`${num(r.due30, 0, loc)} ${lang === "de" ? "Messmittel" : "instruments"}`} wert={euro(r.wert, loc)} />
                   ))}
@@ -341,12 +334,18 @@ export default function VerlaufPage() {
   );
 }
 
+function shiftMonthKey(key: string, delta: number): string {
+  const t = Number(key.slice(0, 4)) * 12 + (Number(key.slice(5, 7)) - 1) + delta;
+  return `${Math.floor(t / 12)}-${String((t % 12) + 1).padStart(2, "0")}`;
+}
+
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
-      className={`h-[30px] px-3.5 rounded-[9px] text-[12.5px] font-semibold transition-all ${
-        active ? "bg-slate-900 text-white shadow" : "text-slate-500 hover:text-slate-900 hover:bg-white"
+      aria-pressed={active}
+      className={`h-8 px-3.5 rounded-[6px] text-[12.5px] font-semibold transition-colors ${
+        active ? "bg-navy-800 text-white shadow" : "text-ink-3 hover:text-ink hover:bg-surface-0"
       }`}
     >
       {children}
@@ -356,16 +355,20 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 
 function PotRow({ kunde, branche, metric, wert }: { kunde: string; branche: string; metric: string; wert: string }) {
   return (
-    <tr className="hover:bg-blue-50/40">
-      <td className="px-4 py-2">
-        <Link href={`/kunden/${kunde}`} className="tnum font-bold text-slate-900 hover:text-[#2563eb]">Kunde {kunde}</Link>
+    <tr>
+      <td className="px-5 py-2">
+        <Link href={`/kunden/${kunde}`} className="tnum font-semibold text-navy-800 hover:text-action">Kunde {kunde}</Link>
       </td>
-      <td className="px-2 py-2 text-slate-500 max-w-[260px] truncate">{branche}</td>
-      <td className="px-2 py-2 text-slate-700">{metric}</td>
-      <td className="px-2 py-2 text-right tnum font-bold text-slate-900 whitespace-nowrap">{wert}</td>
-      <td className="px-4 py-2 text-right">
-        <Link href={`/kunden/${kunde}`} className="inline-flex items-center gap-1 text-[12.5px] font-bold text-[#2563eb] hover:underline">
-          <ArrowRight size={13} />
+      <td className="px-2 py-2 text-ink-2 max-w-[260px] truncate" title={branche}>{branche}</td>
+      <td className="px-2 py-2 text-ink-2">{metric}</td>
+      <td className="px-2 py-2 text-right tnum font-bold text-navy-800 whitespace-nowrap">{wert}</td>
+      <td className="px-5 py-2 text-right">
+        <Link
+          href={`/kunden/${kunde}`}
+          aria-label={`Kunde ${kunde} öffnen`}
+          className="inline-flex items-center justify-center w-8 h-8 rounded-[8px] text-[12.5px] font-bold text-ink-3 hover:text-action hover:bg-surface-1 transition-colors"
+        >
+          <ArrowRight size={14} />
         </Link>
       </td>
     </tr>

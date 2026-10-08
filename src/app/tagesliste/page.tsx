@@ -7,6 +7,7 @@ import {
   Check,
   Copy,
   Download,
+  FileText,
   Mail,
   MapPin,
   Phone,
@@ -196,14 +197,14 @@ export default function HeutePage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* ---------------- Kopfzeile ---------------- */}
-      <div className="px-5 pt-4 pb-3 shrink-0">
+      <div className="px-6 pt-4 pb-3 shrink-0">
         <div className="card px-5 py-3 anim-fade-up">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-7 h-7 rounded-[8px] bg-blue-50 grid place-items-center shrink-0">
-                <Target size={15} className="text-[#2563eb]" />
+              <span className="w-7 h-7 rounded-[8px] bg-surface-1 border border-line grid place-items-center shrink-0">
+                <Target size={15} className="text-navy-800" />
               </span>
-              <p className="text-[13.5px] leading-snug text-ink truncate">
+              <p className="text-[13px] leading-snug text-ink truncate">
                 <strong className="font-bold">
                   {lang === "de"
                     ? `Guten Morgen, ${ANREDE_NAME[app.user.id] ?? app.user.kurz}.`
@@ -228,13 +229,13 @@ export default function HeutePage() {
             </div>
             <div className="flex-1" />
             <div className="hidden md:flex items-center gap-2 text-[11.5px]">
-              <span className="tnum inline-flex items-center h-7 px-2.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
+              <span className="tnum inline-flex items-center h-7 px-2.5 rounded-full bg-surface-1 border border-line text-ink-2">
                 {lang === "de" ? "Vorschlagsliste" : "Candidates"}:{" "}
-                <strong className="text-slate-900 ml-1">{numDE(getKandidatenZahl(app.stichtag))}</strong>
+                <strong className="text-navy-800 ml-1">{numDE(getKandidatenZahl(app.stichtag))}</strong>
               </span>
-              <span className="tnum inline-flex items-center h-7 px-2.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">
+              <span className="tnum inline-flex items-center h-7 px-2.5 rounded-full bg-surface-1 border border-line text-ink-2">
                 {lang === "de" ? "Überfällig gesamt" : "Overdue total"}:{" "}
-                <strong className="text-slate-900 ml-1">{numDE(64915)}</strong>
+                <strong className="text-navy-800 ml-1">{numDE(64915)}</strong>
               </span>
             </div>
           </div>
@@ -243,7 +244,7 @@ export default function HeutePage() {
 
       {/* ---------------- toolbar (nur in der Listenansicht) ---------------- */}
       {!fokus && (
-      <div className="px-5 pb-3 flex items-center gap-2 flex-wrap shrink-0">
+      <div className="px-6 pb-3 flex items-center gap-2 flex-wrap shrink-0">
         <label className="inline-flex items-center gap-1.5 h-[30px] pl-2 pr-1.5 rounded-[8px] border border-line bg-surface-0 focus-within:border-brand-700 transition-colors w-[190px]">
           <Search size={13} className="text-ink-3 shrink-0" />
           <input
@@ -292,10 +293,10 @@ export default function HeutePage() {
 
       {/* ---------------- Liste (vollflächig) oder Fokus-Ansicht ---------------- */}
       {!fokus ? (
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4">
         <div className="max-w-4xl mx-auto card overflow-hidden">
           <div className="px-4 py-2.5 border-b border-line bg-surface-1 flex items-center gap-3 flex-wrap">
-            <div className="inline-flex items-center gap-1 rounded-[9px] bg-surface-0 border border-line p-[3px]">
+            <div className="inline-flex items-center gap-1 rounded-[8px] bg-surface-0 border border-line p-[3px]">
               <button
                 onClick={() => setAnsicht("offen")}
                 className={clsx(
@@ -392,7 +393,7 @@ export default function HeutePage() {
                         item.prioritaet === "hoch" ? "bg-brand-700" : item.prioritaet === "mittel" ? "bg-navy-800" : "bg-line-strong",
                       )}
                     />
-                    <span className="text-[13.5px] font-bold text-ink truncate">{k.name}</span>
+                    <span className="text-[13px] font-bold text-ink truncate">{k.name}</span>
                     <span className="tnum text-[11.5px] text-ink-3 shrink-0">{k.nummer}</span>
                     <span className="flex-1" />
                     <span className="tnum text-[13px] font-bold text-navy-800 shrink-0">{euro(item.ev, loc)}</span>
@@ -431,7 +432,7 @@ export default function HeutePage() {
                   <span className="w-[7px] h-[7px] rounded-full bg-ok shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[13.5px] font-bold text-ink truncate">{k.name}</span>
+                      <span className="text-[13px] font-bold text-ink truncate">{k.name}</span>
                       <span className="tnum text-[11.5px] text-ink-3 shrink-0">{k.nummer}</span>
                     </div>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -457,7 +458,7 @@ export default function HeutePage() {
       </div>
       ) : selectedItem && kunde ? (
       /* ---------------- Fokus-Ansicht: ein Kunde, vollflächig ---------------- */
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4">
         <div className="max-w-5xl mx-auto card overflow-hidden anim-fade-in">
           <DetailPane
             key={selectedItem.kundeId}
@@ -632,7 +633,7 @@ function DetailPane({
             <p className="tnum text-[19px] font-bold text-navy-800 leading-none" title={t("empf.wertHint")}>
               {euro(item.ev, loc)}
             </p>
-            <p className="text-[10.5px] text-ink-3 uppercase tracking-wider font-semibold mt-1">{t("empf.wert")}</p>
+            <p className="section-label mt-1">{t("empf.wert")}</p>
           </div>
         </div>
 
@@ -667,7 +668,7 @@ function DetailPane({
           </div>
           <ul className="space-y-1.5">
             {gruende.map((r, i) => (
-              <li key={i} className="text-[13.5px] leading-relaxed text-ink flex gap-2">
+              <li key={i} className="text-[13px] leading-relaxed text-ink flex gap-2">
                 <span className="text-brand-700 mt-[7px] w-1 h-1 rounded-full bg-brand-700 shrink-0" />
                 <span>{reasonText(r.code, r.params, lang)}</span>
               </li>
@@ -681,7 +682,7 @@ function DetailPane({
             </button>
           )}
           {warum && (
-            <div className="mt-3 card p-3.5 anim-pop">
+            <div className="mt-3 card-section p-4 anim-pop">
               <p className="text-[12px] font-bold text-navy-800 mb-2.5">{t("empf.warumTitel")}</p>
               <FactorBars
                 lang={lang}
@@ -697,7 +698,7 @@ function DetailPane({
         {/* Zeitstrahl */}
         <div>
           <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2 mb-2">{t("empf.zeitstrahl")}</h3>
-          <div className="card p-3">
+          <div className="card-section p-4">
             <Zeitstrahl buckets={buckets} stichtag={app.stichtag} lang={lang} compact />
           </div>
         </div>
@@ -710,26 +711,26 @@ function DetailPane({
               {t("empf.alleAnzeigen")} <ArrowRight size={12} />
             </Link>
           </div>
-          <div className="card overflow-hidden">
-            <table className="w-full text-[12.5px]">
+          <div className="rounded-[8px] border border-line bg-surface-0 overflow-hidden">
+            <table className="tbl w-full text-[12.5px]">
               <thead>
-                <tr className="bg-surface-1 text-[10.5px] uppercase tracking-wider text-ink-3">
+                <tr className="bg-surface-1 text-[11px] uppercase tracking-wider text-ink-3">
                   <th className="text-left font-bold px-3 py-1.5">{t("k360.spalten.ident")}</th>
                   <th className="text-left font-bold px-3 py-1.5">{t("k360.spalten.gruppe")}</th>
                   <th className="text-right font-bold px-3 py-1.5">{t("k360.spalten.faelligkeit")}</th>
-                  <th className="text-right font-bold px-3 py-1.5">{t("k360.spalten.status")}</th>
+                  <th className="text-left font-bold px-3 py-1.5">{t("k360.spalten.status")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-line)]">
                 {betroffen.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} className="hover:bg-surface-1 transition-colors">
                     <td className="px-3 py-1.5 tnum text-ink-2">{r.ident}</td>
                     <td className="px-3 py-1.5 text-ink">
                       {r.typ}
                       {r.geschaetzt && <span className="ml-1.5 text-[10px] text-due font-semibold">≈ {t("empf.geschaetzt").slice(0, 18)}…</span>}
                     </td>
                     <td className="px-3 py-1.5 text-right tnum text-ink-2">{date(r.faelligkeit, loc)}</td>
-                    <td className="px-3 py-1.5 text-right">
+                    <td className="px-3 py-1.5 text-left">
                       <StatusPill status={r.status} lang={lang} />
                     </td>
                   </tr>
@@ -746,7 +747,7 @@ function DetailPane({
           <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2 mb-2">
             {t("empf.ansprechpartner")} <DemoBadge />
           </h3>
-          <div className="card p-3.5 grid grid-cols-2 gap-y-2 gap-x-4 text-[13px]">
+          <div className="rounded-[8px] border border-line bg-surface-0 p-4 grid grid-cols-2 gap-y-2 gap-x-4 text-[13px]">
             <div>
               <p className="font-semibold text-ink">{k.ansprech}</p>
               <p className="text-ink-3 text-[12px]">{k.ort} · {k.gebiet}</p>
@@ -767,7 +768,7 @@ function DetailPane({
           <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2 mb-2">
             {lang === "de" ? "Details" : "Details"}
           </h3>
-          <dl className="card p-3.5 space-y-2 text-[12.5px]">
+          <dl className="rounded-[8px] border border-line bg-surface-0 p-4 space-y-2 text-[12.5px]">
             <div className="flex items-center justify-between gap-2">
               <dt className="text-ink-3">{t("k360.kundeSeit")}</dt>
               <dd className="tnum font-semibold text-ink">{k.seit}</dd>
@@ -797,7 +798,7 @@ function DetailPane({
       {/* action bar: eine einzige, klar gewichtete Zeile */}
       <div className="sticky bottom-0 border-t border-line px-4 py-3 bg-surface-1/95 backdrop-blur flex items-center gap-1.5 overflow-x-auto">
         {!claim ? (
-          <Btn variant="dark" onClick={onClaim} title="Ü" className="shrink-0">
+          <Btn variant="primary" onClick={onClaim} title="Ü" className="shrink-0">
             <UserCheck size={14} /> {t("akt.uebernehmen")}
           </Btn>
         ) : (
@@ -807,7 +808,7 @@ function DetailPane({
         )}
         <a
           href={`tel:${k.telefon.replace(/[^0-9+]/g, "")}`}
-          className="shrink-0 inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-[10px] text-[13px] font-semibold bg-surface-0 text-ink border border-line-strong hover:bg-surface-1 hover:border-ink-3 transition-all"
+          className="shrink-0 inline-flex items-center justify-center h-9 px-4 rounded-[8px] text-[13px] font-semibold border border-line-strong bg-surface-0 text-ink hover:bg-surface-1"
         >
           <Phone size={14} /> {t("akt.anrufen")}
         </a>
@@ -815,7 +816,7 @@ function DetailPane({
           <Mail size={14} /> {t("akt.email")}
         </Btn>
         <Btn variant="secondary" onClick={onQuote} title="A" className="shrink-0">
-          <FileTextIcon /> {t("akt.angebot")}
+          <FileText size={14} /> {t("akt.angebot")}
         </Btn>
         <div className="flex-1 min-w-2" />
         <Btn variant="ghost" onClick={onLater} title="S" className="shrink-0">
@@ -824,21 +825,11 @@ function DetailPane({
         <Btn variant="ghost" onClick={onField} className="shrink-0">
           <MapPin size={14} /> <span className="hidden xl:inline">{t("akt.aussendienst")}</span>
         </Btn>
-        <Btn variant="primary" onClick={onDone} title="D" className="shrink-0 shadow-[0_6px_16px_-8px_rgba(184,78,0,.7)]">
+        <Btn variant="secondary" onClick={onDone} title="D" className="shrink-0">
           <Check size={14} /> {t("akt.erledigt")}
         </Btn>
       </div>
     </>
-  );
-}
-
-function FileTextIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-      <path d="M8 13h8M8 17h5" />
-    </svg>
   );
 }
 
@@ -886,7 +877,7 @@ function ErgebnisDialog({
             key={o.code}
             onClick={() => setCode(o.code)}
             className={clsx(
-              "h-[42px] rounded-[9px] border text-[13px] font-semibold transition-all text-left px-3",
+              "h-[42px] rounded-[8px] border text-[13px] font-semibold transition-all text-left px-3",
               code === o.code
                 ? "border-brand-700 bg-brand-50 text-brand-700 shadow-[0_0_0_1px_var(--color-brand-700)]"
                 : "border-line hover:border-line-strong bg-surface-0 text-ink",
@@ -972,7 +963,7 @@ function SpaeterDialog({ open, onClose, onPick }: { open: boolean; onClose: () =
           <button
             key={p.label}
             onClick={() => onPick(p.date)}
-            className="h-[64px] rounded-[10px] border border-line hover:border-brand-700 hover:bg-brand-50 transition-colors flex flex-col items-center justify-center gap-1"
+            className="h-[64px] rounded-[8px] border border-line hover:border-brand-700 hover:bg-brand-50 transition-colors flex flex-col items-center justify-center gap-1"
           >
             <Calendar size={15} className="text-brand-700" />
             <span className="text-[12.5px] font-semibold text-ink">{p.label}</span>
@@ -1044,11 +1035,11 @@ function EmailDialog({ open, onClose, kundeId, emp }: { open: boolean; onClose: 
       {tab === "mail" && (
         <div className="mb-3">
           <p className="text-[11px] font-bold uppercase tracking-wider text-ink-3 mb-1">{t("email.betreff")}</p>
-          <p className="text-[13.5px] font-semibold text-ink bg-surface-1 border border-line rounded-[8px] px-3 py-2">{mail.betreff}</p>
+          <p className="text-[13px] font-semibold text-ink bg-surface-1 border border-line rounded-[8px] px-3 py-2">{mail.betreff}</p>
         </div>
       )}
 
-      <div className="rounded-[10px] border border-line bg-surface-1 p-4 text-[13.5px] leading-relaxed text-ink whitespace-pre-wrap max-h-[46vh] overflow-y-auto">
+      <div className="rounded-[8px] border border-line bg-surface-1 p-4 text-[13px] leading-relaxed text-ink whitespace-pre-wrap max-h-[46vh] overflow-y-auto">
         {body}
       </div>
 

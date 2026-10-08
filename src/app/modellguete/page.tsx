@@ -18,8 +18,9 @@ import { useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import { Card, Chip, Sparkline } from "@/components/ui";
 
-const GRADIENT_MODEL = "linear-gradient(180deg, var(--color-brand), var(--color-brand-700))";
-const GRADIENT_OTHER = "linear-gradient(180deg, var(--color-navy-600), var(--color-navy-700))";
+const SOLID_MODEL = "var(--color-brand-700)";
+const SOLID_OTHER = "var(--color-navy-700)";
+const SOLID_MUTED = "var(--color-ink-3)";
 
 export default function ModellguetePage() {
   const { t, lang } = useI18n();
@@ -27,28 +28,29 @@ export default function ModellguetePage() {
   const karten = getModellguete();
 
   return (
-    <div className="h-full overflow-y-auto px-5 py-4">
+    <div className="h-full overflow-y-auto">
+      <div className="page space-y-4">
       {/* ---------------- intro ---------------- */}
-      <div className="mb-4 anim-fade-up">
+      <div className="anim-fade-up">
         <div className="flex items-center gap-2.5">
-          <span className="w-8 h-8 rounded-[9px] bg-azure-100 text-azure-800 grid place-items-center shrink-0">
+          <span className="w-9 h-9 rounded-[8px] bg-surface-1 border border-line text-navy-800 grid place-items-center shrink-0">
             <ShieldCheck size={16} />
           </span>
-          <h1 className="text-[20px] font-bold leading-tight text-navy-800">{t("modell.titel")}</h1>
+          <h1 className="page-title">{t("modell.titel")}</h1>
         </div>
-        <p className="text-[13px] text-ink-2 mt-2 max-w-3xl leading-relaxed">
+        <p className="page-sub max-w-3xl">
           {t("modell.intro", { datum: date("2026-10-06", loc) })}
         </p>
       </div>
 
       {/* ---------------- Modellkarten ---------------- */}
-      <div className="grid gap-3 xl:grid-cols-2 mb-3 stagger">
+      <div className="grid gap-3 xl:grid-cols-2 stagger">
         {karten.map((m) => (
           <Card key={m.id} className="anim-fade-up">
-            <div className="px-4 pt-3.5 pb-4">
+            <div className="px-5 pt-4 pb-5">
               {/* title + status */}
               <div className="flex items-start justify-between gap-3">
-                <h2 className="text-[14.5px] font-bold text-navy-800 leading-snug">{m.titel}</h2>
+                <h2 className="text-[14px] font-bold text-navy-800 leading-snug">{m.titel}</h2>
                 {m.erfuellt ? (
                   <Chip tone="ok" className="shrink-0">
                     <CircleCheck size={11} /> {t("modell.erfüllt")}
@@ -62,24 +64,24 @@ export default function ModellguetePage() {
 
               {/* was macht das? */}
               <div className="mt-2.5">
-                <p className="text-[10.5px] font-bold uppercase tracking-wider text-ink-3">{t("modell.was")}</p>
+                <p className="section-label">{t("modell.was")}</p>
                 <p className="text-[13px] text-ink-2 mt-1 leading-relaxed">{m.was[lang]}</p>
               </div>
 
               {/* metrics strip */}
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="rounded-[9px] bg-surface-1 border border-line px-2.5 py-2 min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3 leading-tight">{m.metrikName}</p>
-                  <p className="tnum text-[19px] font-bold text-navy-800 mt-1.5 leading-none">{m.wertLabel}</p>
+                <div className="rounded-[8px] bg-surface-1 border border-line px-2.5 py-2 min-w-0">
+                  <p className="section-label leading-tight">{m.metrikName}</p>
+                  <p className="tnum text-[18px] font-bold text-navy-800 mt-1.5 leading-none">{m.wertLabel}</p>
                 </div>
-                <div className="rounded-[9px] bg-surface-1 border border-line px-2.5 py-2 min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3 leading-tight">
+                <div className="rounded-[8px] bg-surface-1 border border-line px-2.5 py-2 min-w-0">
+                  <p className="section-label leading-tight">
                     {m.baselineName}
                   </p>
-                  <p className="tnum text-[19px] font-bold text-ink-2 mt-1.5 leading-none">{m.baselineLabel}</p>
+                  <p className="tnum text-[18px] font-bold text-ink-2 mt-1.5 leading-none">{m.baselineLabel}</p>
                 </div>
-                <div className="rounded-[9px] bg-surface-1 border border-line px-2.5 py-2 min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3 leading-tight">
+                <div className="rounded-[8px] bg-surface-1 border border-line px-2.5 py-2 min-w-0">
+                  <p className="section-label leading-tight">
                     {t("modell.ziel")}
                   </p>
                   <p className="text-[12px] font-semibold text-ink-2 mt-1.5 leading-snug">{m.ziel}</p>
@@ -87,13 +89,13 @@ export default function ModellguetePage() {
               </div>
 
               {/* chart */}
-              <div className="mt-3 rounded-[10px] border border-line bg-surface-1 p-3">
+              <div className="mt-3 rounded-[8px] border border-line bg-surface-1 p-3">
                 <ModellChart chart={m.chart} />
               </div>
 
               {/* bedeutet das? */}
               <div className="mt-3 pt-3 border-t border-line">
-                <p className="text-[10.5px] font-bold uppercase tracking-wider text-ink-3">{t("modell.bedeutet")}</p>
+                <p className="section-label">{t("modell.bedeutet")}</p>
                 <p className="text-[13px] text-ink mt-1 leading-relaxed">{m.bedeutet[lang]}</p>
               </div>
             </div>
@@ -102,7 +104,7 @@ export default function ModellguetePage() {
       </div>
 
       {/* ---------------- Datenqualität ---------------- */}
-      <div className="grid gap-3 xl:grid-cols-3 mb-3">
+      <div className="grid gap-3 xl:grid-cols-3">
         <Card
           className="anim-fade-up xl:col-span-2"
           title={t("modell.datenqualitaet")}
@@ -112,21 +114,21 @@ export default function ModellguetePage() {
               : "What was cleaned before computing – and how many instruments it affects."
           }
         >
-          <div className="pb-3.5 overflow-x-auto">
-            <table className="w-full text-[12.5px]">
+          <div className="pb-4 overflow-x-auto">
+            <table className="tbl w-full text-[12.5px]">
               <thead>
-                <tr className="bg-surface-1 text-[10.5px] uppercase tracking-wider text-ink-3">
-                  <th className="text-left font-bold px-3 py-1.5">
+                <tr className="text-[11px]">
+                  <th className="text-left font-bold px-5 py-1.5">
                     {lang === "de" ? "Bereinigung" : "Cleanup"}
                   </th>
-                  <th className="text-right font-bold px-3 py-1.5">{lang === "de" ? "Betroffen" : "Affected"}</th>
+                  <th className="text-right font-bold px-5 py-1.5">{lang === "de" ? "Betroffen" : "Affected"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-line)]">
                 {DQ_REPORT.map((r, i) => (
-                  <tr key={`${r.regel}-${i}`} className="even:bg-surface-1/60">
-                    <td className="px-3 py-1.5 text-ink">{r.beschreibung[lang]}</td>
-                    <td className="px-3 py-1.5 tnum text-right text-ink-2 whitespace-nowrap">{num(r.betroffen, 0, loc)}</td>
+                  <tr key={`${r.regel}-${i}`}>
+                    <td className="px-5 py-1.5 text-ink">{r.beschreibung[lang]}</td>
+                    <td className="px-5 py-1.5 tnum text-right text-ink-2 whitespace-nowrap">{num(r.betroffen, 0, loc)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -136,8 +138,8 @@ export default function ModellguetePage() {
 
         {/* ---------------- Assistent ---------------- */}
         <Card className="anim-fade-up" title={t("modell.assistent")}>
-          <div className="px-4 pb-4 pt-1 flex items-center gap-4">
-            <p className="tnum text-[34px] font-bold text-navy-800 leading-none shrink-0">
+          <div className="px-5 pb-5 pt-1 flex items-center gap-4">
+            <p className="tnum text-[24px] font-bold text-navy-800 leading-none shrink-0">
               {ASSISTENT_EVAL.richtig}
               <span className="text-ink-3">/{ASSISTENT_EVAL.gesamt}</span>
             </p>
@@ -146,7 +148,7 @@ export default function ModellguetePage() {
                 <CircleCheck size={11} />
                 {lang === "de" ? "belegt aus den Daten" : "grounded in the data"}
               </Chip>
-              <p className="text-[11.5px] text-ink-3 mt-1.5 leading-snug tnum">
+              <p className="text-[12px] text-ink-3 mt-1.5 leading-snug tnum">
                 {lang === "de" ? "Golden-Set, Stand 06.10.2026" : "Golden set, as of 06/10/2026"}
               </p>
             </div>
@@ -156,7 +158,7 @@ export default function ModellguetePage() {
 
       {/* ---------------- Annahmen ---------------- */}
       <Card
-        className="mb-3 anim-fade-up"
+        className="anim-fade-up"
         title={t("modell.annahmen")}
         hint={
           lang === "de"
@@ -164,23 +166,23 @@ export default function ModellguetePage() {
             : "What the model assumes – every assumption documented openly."
         }
       >
-        <div className="pb-3.5 overflow-x-auto">
-          <table className="w-full text-[12.5px]">
+        <div className="pb-4 overflow-x-auto">
+          <table className="tbl w-full text-[12.5px]">
             <thead>
-              <tr className="bg-surface-1 text-[10.5px] uppercase tracking-wider text-ink-3">
-                <th className="text-left font-bold px-3 py-1.5">{lang === "de" ? "Annahme" : "Assumption"}</th>
+              <tr className="text-[11px]">
+                <th className="text-left font-bold px-5 py-1.5">{lang === "de" ? "Annahme" : "Assumption"}</th>
                 <th className="text-left font-bold px-3 py-1.5">{t("common.wert")}</th>
                 <th className="text-left font-bold px-3 py-1.5">{t("modell.quelle")}</th>
-                <th className="text-left font-bold px-3 py-1.5">{t("modell.status")}</th>
+                <th className="text-left font-bold px-5 py-1.5">{t("modell.status")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-line)]">
               {ANNAHMEN.map((a) => (
-                <tr key={a.id} className="even:bg-surface-1/60">
-                  <td className="px-3 py-1.5 text-ink font-medium min-w-[200px]">{a.titel}</td>
+                <tr key={a.id}>
+                  <td className="px-5 py-1.5 text-ink font-medium min-w-[200px]">{a.titel}</td>
                   <td className="px-3 py-1.5 tnum text-ink-2 whitespace-nowrap">{a.wert}</td>
                   <td className="px-3 py-1.5 text-ink-2 min-w-[240px]">{a.quelle}</td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-5 py-1.5">
                     {a.status === "angenommen" ? (
                       <Chip tone="due">{t("modell.angenommen")}</Chip>
                     ) : (
@@ -195,7 +197,7 @@ export default function ModellguetePage() {
       </Card>
 
       {/* ---------------- footnote ---------------- */}
-      <p className="mb-2 text-[11.5px] text-ink-3 leading-relaxed flex items-start gap-1.5 max-w-4xl">
+      <p className="text-[12px] text-ink-3 leading-relaxed flex items-start gap-1.5 max-w-4xl">
         <Info size={13} className="shrink-0 mt-0.5" />
         <span>
           {lang === "de"
@@ -203,6 +205,7 @@ export default function ModellguetePage() {
             : "All metrics come from the holdout measurement of 06/10/2026 – honestly measured, nothing smoothed. They are embedded in this demo; every pipeline run recalculates them."}
         </span>
       </p>
+      </div>
     </div>
   );
 }
@@ -241,26 +244,26 @@ function RuecklaufChart() {
 
   return (
     <div>
-      <p className="text-[10.5px] font-bold uppercase tracking-wider text-ink-3 mb-2">
+      <p className="section-label mb-2">
         {lang === "de" ? "Eingang relativ zur Fälligkeit" : "Arrival relative to the due date"}
       </p>
-      <div className="flex items-end gap-2 h-[170px]">
+      <div className="flex items-end gap-2 h-[160px]">
         {RUECKLAUF_HISTOGRAMM.map((d) => (
           <div key={d.bucket} className="flex-1 min-w-0 h-full flex flex-col items-center justify-end">
-            <span className="tnum text-[10.5px] text-ink-3 mb-1">{pct(d.anteil, 0, loc)}</span>
+            <span className="tnum text-[10px] text-ink-3 mb-1">{pct(d.anteil, 0, loc)}</span>
             <div
               className="w-full rounded-t-[4px]"
               style={{
-                height: `${Math.max(3, (d.anteil / max) * 140)}px`,
-                background: d.anteil === max ? GRADIENT_MODEL : GRADIENT_OTHER,
+                height: `${Math.max(3, (d.anteil / max) * 130)}px`,
+                background: d.anteil === max ? SOLID_MODEL : SOLID_OTHER,
               }}
             />
           </div>
         ))}
       </div>
-      <div className="flex gap-2 border-t border-line-strong mt-1 pt-1.5">
+      <div className="flex gap-2 border-t border-line mt-1 pt-1.5">
         {RUECKLAUF_HISTOGRAMM.map((d) => (
-          <span key={d.bucket} className="flex-1 min-w-0 text-center text-[9.5px] leading-tight text-ink-3">
+          <span key={d.bucket} className="flex-1 min-w-0 text-center text-[10px] leading-tight text-ink-3">
             {d.bucket}
           </span>
         ))}
@@ -269,7 +272,7 @@ function RuecklaufChart() {
         entries={[
           {
             label: lang === "de" ? "Anteil der Eingänge" : "Share of arrivals",
-            swatch: <span className="w-3 h-3 rounded-[3px]" style={{ background: "var(--color-brand)" }} />,
+            swatch: <span className="w-3 h-3 rounded-[4px]" style={{ background: "var(--color-brand)" }} />,
           },
         ]}
       />
@@ -309,7 +312,7 @@ function PrecisionChart() {
               x={pad.l - 6}
               y={y(v) + 3}
               textAnchor="end"
-              fontSize="9.5"
+              fontSize="10"
               className="tnum"
               fill="var(--color-ink-3)"
             >
@@ -325,7 +328,7 @@ function PrecisionChart() {
             x={x(k)}
             y={h - pad.b + 14}
             textAnchor="middle"
-            fontSize="9.5"
+            fontSize="10"
             className="tnum"
             fill="var(--color-ink-3)"
           >
@@ -378,7 +381,7 @@ function KalibrierungChart() {
               x={x(v)}
               y={h - pad.b + 14}
               textAnchor="middle"
-              fontSize="9.5"
+              fontSize="10"
               className="tnum"
               fill="var(--color-ink-3)"
             >
@@ -388,7 +391,7 @@ function KalibrierungChart() {
               x={pad.l - 6}
               y={y(v) + 3}
               textAnchor="end"
-              fontSize="9.5"
+              fontSize="10"
               className="tnum"
               fill="var(--color-ink-3)"
             >
@@ -416,7 +419,7 @@ function KalibrierungChart() {
           x={w / 2}
           y={h - 6}
           textAnchor="middle"
-          fontSize="9.5"
+          fontSize="10"
           fill="var(--color-ink-3)"
           fontWeight="700"
         >
@@ -427,7 +430,7 @@ function KalibrierungChart() {
           x={12}
           y={h / 2}
           textAnchor="middle"
-          fontSize="9.5"
+          fontSize="10"
           fill="var(--color-ink-3)"
           fontWeight="700"
         >
@@ -455,35 +458,35 @@ function RankingChart() {
   const { t, lang } = useI18n();
   const loc = lang === "de" ? "de-DE" : "en-GB";
   const bars = [
-    { label: t("prioritaet.hoch"), v: 54, bg: GRADIENT_MODEL },
-    { label: t("prioritaet.mittel"), v: 33, bg: GRADIENT_OTHER },
+    { label: t("prioritaet.hoch"), v: 54, bg: SOLID_MODEL },
+    { label: t("prioritaet.mittel"), v: 33, bg: SOLID_OTHER },
     {
       label: t("prioritaet.niedrig"),
       v: 19,
-      bg: "linear-gradient(180deg, var(--color-line-strong), var(--color-ink-3))",
+      bg: SOLID_MUTED,
     },
   ];
   const max = 60;
 
   return (
     <div>
-      <p className="text-[10.5px] font-bold uppercase tracking-wider text-ink-3 mb-2">
+      <p className="section-label mb-2">
         {lang === "de" ? "Volumen unter Erwartung" : "Volume below expectation"}
       </p>
-      <div className="flex items-end gap-5 h-[150px] px-1">
+      <div className="flex items-end gap-5 h-[160px] px-1">
         {bars.map((b) => (
           <div key={b.label} className="flex-1 min-w-0 h-full flex flex-col items-center justify-end">
             <span className="tnum text-[12.5px] font-bold text-navy-800 mb-1">{pct(b.v / 100, 0, loc)}</span>
             <div
-              className="w-full rounded-t-[5px]"
-              style={{ height: `${Math.max(3, (b.v / max) * 118)}px`, background: b.bg }}
+              className="w-full rounded-t-[4px]"
+              style={{ height: `${Math.max(3, (b.v / max) * 128)}px`, background: b.bg }}
             />
           </div>
         ))}
       </div>
-      <div className="flex gap-5 px-1 border-t border-line-strong mt-1 pt-1.5">
+      <div className="flex gap-5 px-1 border-t border-line mt-1 pt-1.5">
         {bars.map((b) => (
-          <span key={b.label} className="flex-1 min-w-0 text-center text-[11.5px] font-semibold text-ink-2">
+          <span key={b.label} className="flex-1 min-w-0 text-center text-[12px] font-semibold text-ink-2">
             {b.label}
           </span>
         ))}

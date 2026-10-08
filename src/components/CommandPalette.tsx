@@ -42,14 +42,14 @@ export function CommandPalette() {
       { kind: "page", id: "p0", label: t("nav.dashboard"), hint: hintFor("Übersicht mit Kennzahlen", "Overview with KPIs"), href: "/", icon: LayoutDashboard },
       { kind: "page", id: "p1", label: t("nav.tagesliste"), hint: hintFor("Priorisierte Empfehlungen für heute", "Today's prioritized recommendations"), href: "/tagesliste", icon: ListChecks },
       { kind: "page", id: "p2", label: t("nav.verlauf"), hint: hintFor("Abwanderung bisher und Potenzial", "Churn so far and potential"), href: "/verlauf", icon: History },
-      { kind: "page", id: "p2", label: t("kunden.titel"), hint: hintFor("Kunden suchen und öffnen", "Search and open customers"), href: "/kunden", icon: Users },
-      { kind: "page", id: "p3", label: t("nav.messmittel"), hint: hintFor("Fälligkeiten und Status", "Due dates and status"), href: "/messmittel", icon: Ruler },
-      { kind: "page", id: "p4", label: t("nav.angebote"), hint: hintFor("Entwürfe und PDF", "Drafts and PDF"), href: "/angebote", icon: FileText },
+      { kind: "page", id: "p3", label: t("kunden.titel"), hint: hintFor("Kunden suchen und öffnen", "Search and open customers"), href: "/kunden", icon: Users },
+      { kind: "page", id: "p4", label: t("nav.messmittel"), hint: hintFor("Fälligkeiten und Status", "Due dates and status"), href: "/messmittel", icon: Ruler },
+      { kind: "page", id: "p5", label: t("nav.angebote"), hint: hintFor("Entwürfe und PDF", "Drafts and PDF"), href: "/angebote", icon: FileText },
       ...(isLeitung
         ? [
-            { kind: "page" as const, id: "p5", label: t("cockpit.titel"), hint: hintFor("Prognose, Risiko und Team", "Forecast, risk and team"), href: "/cockpit", icon: ChartColumn },
-            { kind: "page" as const, id: "p6", label: t("modell.titel"), hint: hintFor("Modelle und Datenqualität", "Models and data quality"), href: "/modellguete", icon: ShieldCheck },
-            { kind: "page" as const, id: "p7", label: t("einst.titel"), hint: hintFor("Anzeige und Stichtag", "Display and reference date"), href: "/einstellungen", icon: Settings },
+            { kind: "page" as const, id: "p6", label: t("cockpit.titel"), hint: hintFor("Prognose, Risiko und Team", "Forecast, risk and team"), href: "/cockpit", icon: ChartColumn },
+            { kind: "page" as const, id: "p7", label: t("modell.titel"), hint: hintFor("Modelle und Datenqualität", "Models and data quality"), href: "/modellguete", icon: ShieldCheck },
+            { kind: "page" as const, id: "p8", label: t("einst.titel"), hint: hintFor("Anzeige und Stichtag", "Display and reference date"), href: "/einstellungen", icon: Settings },
           ]
         : []),
     ];
@@ -152,17 +152,16 @@ export function CommandPalette() {
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center pt-[14vh] px-4 anim-fade-in no-print">
       <div className="absolute inset-0 bg-navy-950/50 backdrop-blur-[3px]" onClick={() => app.setPaletteOpen(false)} />
-      <div className="cmdk relative w-full max-w-xl bg-surface-0 rounded-[16px] shadow-pop border border-line overflow-hidden anim-pop">
-        <div className="flex items-center gap-2.5 px-4 h-[52px] border-b border-line focus-within:border-[#2563eb] focus-within:ring-4 focus-within:ring-[#2563eb]/15 transition-all">
-          <Search size={16} className="text-[#2563eb] shrink-0" />
+      <div className="cmdk relative w-full max-w-xl bg-surface-0 rounded-[12px] shadow-pop border border-line overflow-hidden anim-pop">
+        <div className="flex items-center gap-2.5 px-4 h-[52px] border-b border-line focus-within:border-line-strong transition-all">
+          <Search size={16} className="text-ink-3 shrink-0" />
           <input
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onKey}
             placeholder={t("palette.placeholder")}
-            style={{ outline: "none" }}
-            className="flex-1 min-w-0 bg-transparent text-[15px] placeholder:text-ink-3"
+            className="flex-1 min-w-0 bg-transparent outline-none text-[15px] placeholder:text-ink-3"
           />
           <span className="text-[11px] font-semibold text-ink-3 bg-surface-1 border border-line rounded-md px-1.5 py-0.5 shrink-0">Esc</span>
         </div>
@@ -175,25 +174,22 @@ export function CommandPalette() {
             return (
               <button
                 key={row.id}
-                onMouseEnter={() => setIdx(i)}
                 onClick={() => {
                   app.setPaletteOpen(false);
                   if (row.kind === "action") row.run();
                   else router.push(row.href);
                 }}
                 className={clsx(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-left transition-colors",
-                  i === idx ? "bg-blue-50/80 ring-1 ring-[#2563eb]/20" : "hover:bg-surface-1",
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-left transition-colors",
+                  i === idx ? "bg-surface-1 ring-1 ring-line" : "hover:bg-surface-1",
                 )}
               >
                 <span
                   className={clsx(
-                    "w-8 h-8 rounded-[10px] grid place-items-center shrink-0 transition-colors",
-                    row.kind === "kunde" || row.kind === "kunde-real"
-                      ? "bg-brand-50 text-brand-700"
-                      : i === idx
-                        ? "bg-[#2563eb] text-white"
-                        : "bg-surface-1 text-ink-2",
+                    "w-8 h-8 rounded-[8px] grid place-items-center shrink-0 transition-colors",
+                    i === idx
+                      ? "bg-navy-800 text-white"
+                      : "bg-surface-1 text-ink-2",
                   )}
                 >
                   <Icon size={15} />

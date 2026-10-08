@@ -22,14 +22,14 @@ export function Btn({
   size?: "sm" | "md";
 }) {
   const base =
-    "inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-all duration-150 select-none disabled:opacity-45 disabled:pointer-events-none whitespace-nowrap";
-  const sizes = { sm: "h-7 px-2.5 text-[12px]", md: "h-9 px-3.5 text-[13px]" }[size];
+    "inline-flex items-center justify-center gap-1.5 rounded-[8px] font-semibold transition-colors duration-150 select-none disabled:opacity-45 disabled:pointer-events-none whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2";
+  const sizes = { sm: "h-8 px-3 text-[12.5px]", md: "h-9 px-4 text-[13px]" }[size];
   const variants = {
-    primary: "bg-brand-700 text-white hover:bg-[#9c4200] active:translate-y-px shadow-[0_6px_16px_-8px_rgba(184,78,0,.7)]",
-    secondary: "bg-surface-0 text-ink border border-line-strong hover:bg-surface-1 hover:border-ink-3 active:translate-y-px shadow-[0_1px_2px_rgba(16,41,58,.06)]",
+    primary: "bg-brand-700 text-white hover:bg-brand-600 active:bg-[#9c4200] shadow-[0_6px_16px_-8px_rgba(184,78,0,.7)]",
+    secondary: "bg-surface-0 text-ink border border-line-strong hover:bg-surface-1 hover:border-ink-3 shadow-[0_1px_2px_rgba(16,41,58,.06)]",
     ghost: "text-ink-2 hover:bg-surface-2 hover:text-ink",
-    dark: "bg-navy-800 text-white hover:bg-navy-700 active:translate-y-px shadow-[0_6px_16px_-10px_rgba(11,30,44,.8)]",
-    danger: "bg-critical text-white hover:brightness-90 active:translate-y-px",
+    dark: "bg-navy-800 text-white hover:bg-navy-700 shadow-[0_6px_16px_-10px_rgba(11,30,44,.8)]",
+    danger: "bg-critical text-white hover:brightness-95",
   }[variant];
   return (
     <button className={clsx(base, sizes, variants, className)} {...rest}>
@@ -86,18 +86,18 @@ export function PrioritaetsBadge({ p, lang }: { p: Prioritaet; lang?: Lang }) {
     p === "hoch" ? (lang === "en" ? "High" : "Hoch") : p === "mittel" ? (lang === "en" ? "Medium" : "Mittel") : lang === "en" ? "Low" : "Niedrig";
   if (p === "hoch")
     return (
-      <span className="inline-flex items-center h-[20px] px-2 rounded-[5px] bg-brand-700 text-white text-[10.5px] font-bold tracking-[0.08em] uppercase">
+      <span className="inline-flex items-center h-[20px] px-2 rounded-[6px] bg-brand-700 text-white text-[11px] font-bold tracking-[0.06em] uppercase">
         {label}
       </span>
     );
   if (p === "mittel")
     return (
-      <span className="inline-flex items-center h-[20px] px-2 rounded-[5px] border border-navy-800/40 text-navy-800 text-[10.5px] font-bold tracking-[0.08em] uppercase">
+      <span className="inline-flex items-center h-[20px] px-2 rounded-[6px] border border-navy-800/40 text-navy-800 text-[11px] font-bold tracking-[0.06em] uppercase">
         {label}
       </span>
     );
   return (
-    <span className="inline-flex items-center h-[20px] px-2 rounded-[5px] border border-line-strong text-ink-3 text-[10.5px] font-bold tracking-[0.08em] uppercase">
+    <span className="inline-flex items-center h-[20px] px-2 rounded-[6px] border border-line-strong text-ink-3 text-[11px] font-bold tracking-[0.06em] uppercase">
       {label}
     </span>
   );
@@ -133,6 +133,28 @@ export function DemoBadge() {
   );
 }
 
+/* PeCal compass mark — navy tile, white/orange needle pointing north-east.
+ * Used for the AI assistant; the product wordmark in the sidebar stays as is. */
+export function PeCalMark({ size = 32 }: { size?: number }) {
+  const icon = Math.round(size * 0.58);
+  return (
+    <span
+      aria-hidden
+      className="grid place-items-center shrink-0 bg-navy-800"
+      style={{ width: size, height: size, borderRadius: Math.max(6, Math.round(size * 0.25)) }}
+    >
+      <svg width={icon} height={icon} viewBox="0 0 24 24" aria-hidden>
+        <circle cx="12" cy="12" r="8.6" fill="none" stroke="rgba(255,255,255,.32)" strokeWidth="1.6" />
+        <g transform="rotate(35 12 12)">
+          <path d="M12 3.8 L14.1 12 L9.9 12 Z" fill="#ffffff" />
+          <path d="M12 20.2 L14.1 12 L9.9 12 Z" fill="var(--color-brand)" />
+          <circle cx="12" cy="12" r="1.4" fill="#ffffff" />
+        </g>
+      </svg>
+    </span>
+  );
+}
+
 export function Card({
   children,
   className,
@@ -149,12 +171,12 @@ export function Card({
   return (
     <section className={clsx("card", className)}>
       {(title || actions) && (
-        <header className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-2">
-          <div>
-            <h2 className="text-[13px] font-bold uppercase tracking-[0.09em] text-ink-2">{title}</h2>
-            {hint && <p className="text-[12px] text-ink-3 mt-0.5">{hint}</p>}
+        <header className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
+          <div className="min-w-0">
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.08em] text-ink-2 leading-tight">{title}</h2>
+            {hint && <p className="text-[12.5px] text-ink-3 mt-1 leading-snug">{hint}</p>}
           </div>
-          {actions}
+          {actions && <div className="shrink-0">{actions}</div>}
         </header>
       )}
       {children}
@@ -176,14 +198,14 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="inline-flex items-center rounded-[7px] border border-line bg-surface-1 p-[2px] gap-[2px]">
+    <div className="inline-flex items-center rounded-[8px] border border-line bg-surface-1 p-[3px] gap-[2px]">
       {options.map((o) => (
         <button
           key={o.value}
           title={o.title}
           onClick={() => onChange(o.value)}
           className={clsx(
-            "h-[26px] px-2.5 rounded-[5px] text-[12px] font-semibold transition-colors",
+            "h-[26px] px-2.5 rounded-[6px] text-[12px] font-semibold transition-colors",
             o.value === value ? "bg-surface-0 text-ink shadow-[0_1px_2px_rgba(16,41,58,.12)]" : "text-ink-3 hover:text-ink",
           )}
         >
@@ -239,13 +261,13 @@ export function Modal({
         role="dialog"
         aria-label={title}
         className={clsx(
-          "relative bg-surface-0 rounded-[14px] shadow-pop border border-line anim-pop w-full overflow-hidden",
+          "relative bg-surface-0 rounded-[12px] shadow-pop border border-line anim-pop w-full overflow-hidden",
           wide ? "max-w-3xl" : "max-w-lg",
         )}
       >
-        <header className="flex items-center justify-between px-5 py-3.5 border-b border-line">
+        <header className="flex items-center justify-between px-5 py-4 border-b border-line">
           <h2 className="text-[15px] font-bold text-navy-800">{title}</h2>
-          <button onClick={onClose} aria-label="Close / Schließen" className="text-ink-3 hover:text-ink p-1 rounded hover:bg-surface-2">
+          <button onClick={onClose} aria-label="Close / Schließen" className="text-ink-3 hover:text-ink p-1.5 rounded-[8px] hover:bg-surface-2 transition-colors">
             <X size={16} />
           </button>
         </header>
@@ -255,14 +277,14 @@ export function Modal({
   );
 }
 
-export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
+export function EmptyState({ title, hint, action, icon }: { title: string; hint?: string; action?: ReactNode; icon?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-14 px-6">
-      <div className="w-12 h-12 rounded-full bg-surface-2 border border-line grid place-items-center mb-3">
-        <span className="w-2.5 h-2.5 rounded-full bg-brand" />
+      <div className="w-11 h-11 rounded-[12px] bg-surface-1 border border-line grid place-items-center mb-3 text-ink-3">
+        {icon ?? <span className="w-2.5 h-2.5 rounded-full bg-line-strong" />}
       </div>
-      <p className="text-[15px] font-semibold text-navy-800">{title}</p>
-      {hint && <p className="text-[13px] text-ink-3 mt-1 max-w-xs">{hint}</p>}
+      <p className="text-[14px] font-semibold text-navy-800">{title}</p>
+      {hint && <p className="text-[13px] text-ink-3 mt-1 max-w-sm leading-relaxed">{hint}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -311,7 +333,7 @@ export function Zeitstrahl({
 
   return (
     <div className="select-none">
-      <div className="relative rounded-[10px] bg-gradient-to-b from-surface-1 to-surface-0 border border-line/70 px-2 pt-2" style={{ height: height + 34 }}>
+      <div className="relative rounded-[8px] bg-gradient-to-b from-surface-1 to-surface-0 border border-line/70 px-2 pt-2" style={{ height: height + 34 }}>
         {/* gridlines */}
         {[0.33, 0.66].map((f) => (
           <div key={f} className="absolute left-2 right-2 border-t border-dashed border-line" style={{ top: 8 + f * height }} />
@@ -340,12 +362,12 @@ export function Zeitstrahl({
                 </div>
                 {hErw > 1 && (
                   <span
-                    className="absolute left-1/2 -translate-x-1/2 w-[7px] h-[7px] rounded-full bg-[#3b9ee3] ring-2 ring-white shadow"
+                    className="absolute left-1/2 -translate-x-1/2 w-[7px] h-[7px] rounded-full bg-azure ring-2 ring-white shadow"
                     style={{ bottom: Math.min(hErw, height - 8) }}
                   />
                 )}
                 {isNeedle && (
-                  <span className="absolute -top-1 left-1/2 -translate-x-1/2 rounded-full bg-brand px-1.5 py-px text-[8.5px] font-bold text-white shadow whitespace-nowrap">
+                  <span className="absolute -top-1 left-1/2 -translate-x-1/2 rounded-full bg-brand px-1.5 py-px text-[10px] font-bold text-white shadow whitespace-nowrap">
                     {L.heute}
                   </span>
                 )}
@@ -500,7 +522,9 @@ export function Sparkline({
 
   const idx = data.map((d, i) => ({ d, i }));
   const histPts = idx.filter(({ d }) => d.historie && !d.partial);
-  const fore = idx.filter(({ d }) => !d.historie);
+  /* Teildaten nie in Linie/Band ziehen – sonst stürzt die Kurve aus der Skala
+   * (z. B. Sep 26 mit 10k bei Stichtag vor Sep 26); Lücken werden interpoliert. */
+  const fore = idx.filter(({ d }) => !d.historie && !d.partial);
   const partialPts = idx.filter(({ d }) => d.partial);
   const lastHistIdx = histPts.length > 0 ? histPts[histPts.length - 1].i : 0;
   const histPath = histPts.map(({ d, i }, k) => `${k === 0 ? "M" : "L"} ${x(i)} ${y(d.kalibrierungen)}`).join(" ");
@@ -519,7 +543,11 @@ export function Sparkline({
 
   /* Trenner an den Übergang volle Historie → Prognose (dort startet auch die Punktlinie). */
   const splitX = x(lastHistIdx);
-  const ticks = [0, Math.floor(data.length / 3), Math.floor((2 * data.length) / 3), data.length - 1];
+  /* Gleichmäßig verteilte Ticks (5) — keine Dubletten, keine Kollisionen. */
+  const tickCount = 5;
+  const ticks = Array.from({ length: tickCount }, (_, k) =>
+    Math.round((k * (data.length - 1)) / (tickCount - 1)),
+  ).filter((v, k, a) => a.indexOf(v) === k);
 
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label={lang === "en" ? "Forecast chart" : "Prognosediagramm"}>
@@ -529,8 +557,8 @@ export function Sparkline({
           <stop offset="100%" stopColor="#1c3b51" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="spark-fore" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#3b9ee3" />
-          <stop offset="100%" stopColor="#2563eb" />
+          <stop offset="0%" stopColor="var(--color-azure)" />
+          <stop offset="100%" stopColor="var(--color-action)" />
         </linearGradient>
       </defs>
       {/* grid */}
@@ -553,7 +581,7 @@ export function Sparkline({
       {/* forecast region */}
       <rect x={splitX} y={pad.t} width={w - pad.r - splitX} height={h - pad.t - pad.b} fill="var(--color-azure-100)" opacity="0.5" rx="6" />
       <path d={band} fill="var(--color-azure)" opacity="0.2" />
-      {showBaseline && basePath && <path d={basePath} fill="none" stroke="var(--color-ink-3)" strokeWidth="1.2" strokeDasharray="5 4" />}
+      {showBaseline && basePath && <path d={basePath} fill="none" stroke="var(--color-ink-3)" strokeWidth="2" strokeDasharray="1 5" strokeLinecap="round" />}
       <path d={`${histPath} L ${x(lastHistIdx)} ${h - pad.b} L ${x(histPts[0]?.i ?? 0)} ${h - pad.b} Z`} fill="url(#spark-hist)" />
       <path d={histPath} fill="none" stroke="var(--color-navy-800)" strokeWidth="2.2" strokeLinecap="round" />
       <path d={forePath} fill="none" stroke="url(#spark-fore)" strokeWidth="2.6" strokeDasharray="7 4" strokeLinecap="round" />

@@ -55,12 +55,13 @@ export default function MessmittelPage() {
   }, [rows]);
 
   return (
-    <div className="h-full overflow-y-auto px-5 py-4">
-      <div className="flex items-end justify-between gap-4 flex-wrap mb-3">
+    <div className="h-full overflow-y-auto">
+      <div className="page space-y-4">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-[17px] font-bold text-navy-800 flex items-center gap-2">
+          <h1 className="page-title">
             {lang === "de" ? "Messmittel" : "Instruments"}
-          </h2>
+          </h1>
           <p className="text-[12.5px] text-ink-3 tnum">
             {data
               ? num(data.kpis.ueberfaellig, 0, loc)
@@ -85,7 +86,7 @@ export default function MessmittelPage() {
               <span className="tnum opacity-70">{num(counts.get(s) ?? 0, 0, loc)}</span>
             </button>
           ))}
-          <label className="flex items-center gap-2 h-[29px] pl-2.5 pr-2 rounded-[8px] border border-line bg-surface-0 w-[190px]">
+          <label className="flex items-center gap-2 h-9 pl-2.5 pr-2 rounded-[8px] border border-line bg-surface-0 w-[200px] focus-within:border-line-strong transition-colors">
             <Search size={13} className="text-ink-3" />
             <input
               value={q}
@@ -105,29 +106,29 @@ export default function MessmittelPage() {
             <div className="h-4 rounded bg-surface-2 animate-pulse w-2/3" />
           </div>
         ) : (
-          <div className="overflow-x-auto max-h-[64vh]">
-            <table className="w-full text-[12.5px] min-w-[780px]">
+          <div className="overflow-x-auto max-h-[64vh] min-h-[200px]">
+            <table className="tbl w-full text-[12.5px] min-w-[780px]">
               <thead className="sticky top-0 z-10">
-                <tr className="bg-surface-1 border-b border-line text-[10.5px] uppercase tracking-wider text-ink-3">
-                  <th className="text-left font-bold px-4 py-2">Ident-Nr.</th>
+                <tr className="bg-surface-1 border-b border-line text-[11px] uppercase tracking-wider text-ink-3">
+                  <th className="text-left font-bold px-5 py-2">Ident-Nr.</th>
                   <th className="text-left font-bold px-3 py-2">{lang === "de" ? "Kunde" : "Customer"}</th>
                   <th className="text-left font-bold px-3 py-2">{lang === "de" ? "Gruppe / Typ" : "Group / type"}</th>
                   <th className="text-left font-bold px-3 py-2">{lang === "de" ? "Fälligkeit" : "Due date"}</th>
-                  <th className="text-right font-bold px-4 py-2">Status</th>
+                  <th className="text-left font-bold px-5 py-2">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-line)]">
                 {filtered.slice(0, limit).map((r, i) => (
-                  <tr key={`${r.kunde}-${r.ident}-${i}`} className="hover:bg-surface-1">
-                    <td className="px-4 py-1.5 tnum text-ink-2">{r.ident || "–"}</td>
-                    <td className="px-3 py-1.5">
+                  <tr key={`${r.kunde}-${r.ident}-${i}`}>
+                    <td className="px-5 py-2 tnum text-ink-2">{r.ident || "–"}</td>
+                    <td className="px-3 py-2">
                       <Link href={`/kunden/${r.kunde}`} className="tnum font-semibold text-ink hover:text-brand-700">{r.kunde}</Link>
                     </td>
-                    <td className="px-3 py-1.5 text-ink">{r.gruppe} <span className="text-ink-3">· {r.typ.slice(0, 40)}</span></td>
-                    <td className={clsx("px-3 py-1.5 tnum", r.tage > 0 ? "text-overdue font-semibold" : "text-ink-2")}>
+                    <td className="px-3 py-2 text-ink">{r.gruppe} <span className="text-ink-3">· {r.typ.slice(0, 40)}</span></td>
+                    <td className={clsx("px-3 py-2 tnum", r.tage > 0 ? "text-overdue font-semibold" : "text-ink-2")}>
                       {date(r.faelligkeit, loc)} <span className="text-ink-3">({r.tage > 0 ? `+${r.tage}` : r.tage} d)</span>
                     </td>
-                    <td className="px-4 py-1.5 text-right">
+                    <td className="px-5 py-2 text-left">
                       <StatusPill status={r.status === "teilabwanderung" ? "teilabwanderung" : r.status === "faellig_bald" ? "faellig_bald" : "ueberfaellig"} lang={lang} />
                     </td>
                   </tr>
@@ -136,7 +137,7 @@ export default function MessmittelPage() {
             </table>
           </div>
         )}
-        {rows && filtered.length === 0 && <EmptyState title={lang === "de" ? "Keine Treffer" : "No matches"} />}
+        {rows && filtered.length === 0 && <EmptyState title={lang === "de" ? "Keine Treffer" : "No matches"} hint={lang === "de" ? "Filter anpassen oder Suche löschen." : "Adjust the filter or clear the search."} />}
         {rows && limit < filtered.length && (
           <div className="border-t border-line px-4 py-3 flex items-center justify-between bg-surface-1">
             <span className="text-[12px] text-ink-3 tnum">{num(Math.min(limit, filtered.length), 0, loc)} / {num(filtered.length, 0, loc)}</span>
@@ -144,9 +145,10 @@ export default function MessmittelPage() {
           </div>
         )}
       </div>
-      <p className="mt-3 text-[11.5px] text-ink-3">
+      <p className="text-[12px] text-ink-3">
         {lang === "de" ? "Stand 25.09.2026 – Auszug der ältesten Fälligkeiten." : "As of 25/09/2026 – extract of the oldest due dates."}
       </p>
+      </div>
     </div>
   );
 }

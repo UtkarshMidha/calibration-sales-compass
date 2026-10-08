@@ -80,6 +80,23 @@ export function buildGrounding(input: GroundingInput): string {
     `atRisk_nach_gebiet: ${agg.byGebiet.slice(0, 6).map((g) => `${g.key} ${euro(g.wert, loc)}`).join(" | ")}`,
   );
 
+  /* ---------- aggregated industry gaps (M5, summed over all customers) ---------- */
+  const lueckAgg = new Map<string, { kunden: number; gruppen: number; wert: number }>();
+  for (const kk of getKunden()) {
+    const ls = getLuecken(kk.id).filter((l) => l.stunden > 0);
+    if (ls.length === 0) continue;
+    const w = ls.reduce((x, l) => x + l.stunden * settings.stundensatz, 0);
+    const e = lueckAgg.get(kk.branche) ?? { kunden: 0, gruppen: 0, wert: 0 };
+    e.kunden += 1;
+    e.gruppen += ls.length;
+    e.wert += w;
+    lueckAgg.set(kk.branche, e);
+  }
+  const lueckTop = [...lueckAgg.entries()].sort((a, b) => b[1].wert - a[1].wert).slice(0, 5);
+  out.push(
+    `branchenluecken_top5 (gruppe fehlt beim kunden, peers kalibrieren sie bei uns): ${lueckTop.map(([b, v]) => `${b}: ${v.gruppen} Lücken bei ${v.kunden} Kunden ≈ ${euro(v.wert, loc)}`).join(" | ") || "keine"}`,
+  );
+
   /* ---------- daily list ---------- */
   const list = getTagesliste(stichtag, settings, { ergebnisse: {}, wiedervorlagen: {}, done: {} });
   out.push("");

@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Check,
   ChevronDown,
+  Copy,
   Download,
   Mail,
   Sparkles,
@@ -96,8 +97,8 @@ export default function AngebotPage() {
   };
 
   return (
-    <div className="h-full overflow-hidden lg:overflow-y-auto px-5 py-4">
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start max-w-[1240px] mx-auto">
+    <div className="h-full overflow-y-auto">
+      <div className="page grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start">
         {/* ============ document sheet ============ */}
         <div className="print-root">
           <div className="flex items-center gap-2 mb-3 no-print">
@@ -110,7 +111,7 @@ export default function AngebotPage() {
             <DemoBadge />
           </div>
 
-          <div className="print-sheet relative bg-white border border-line rounded-[10px] shadow-[0_18px_50px_-30px_rgba(16,42,67,0.5)] px-10 py-9 text-[13px] text-ink overflow-hidden anim-fade-up">
+          <div className="print-sheet relative bg-white border border-line rounded-[12px] shadow-[0_18px_50px_-30px_rgba(16,42,67,0.5)] p-8 md:p-10 text-[13px] text-ink overflow-hidden anim-fade-up">
             <span className="print-watermark absolute left-[16%] top-[44%] -rotate-[24deg] text-[46px] font-black tracking-tight text-navy-800/[0.07] select-none pointer-events-none whitespace-nowrap">
               {t("angebot.wasserzeichen")}
             </span>
@@ -214,32 +215,11 @@ export default function AngebotPage() {
                                   <span className="block text-[10.5px] text-ink-3 tnum">
                                     {l.gruppeName} · {l.minuten} min ·{" "}
                                     <span
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        patch({
-                                          lines: draft.lines.map((x, i) =>
-                                            i === li ? { ...x, pruefungsart: x.pruefungsart === "DAkkS" ? "Werk" : "DAkkS" } : x,
-                                          ),
-                                        });
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          patch({
-                                            lines: draft.lines.map((x, i) =>
-                                              i === li ? { ...x, pruefungsart: x.pruefungsart === "DAkkS" ? "Werk" : "DAkkS" } : x,
-                                            ),
-                                          });
-                                        }
-                                      }}
                                       className={clsx(
-                                        "font-bold underline decoration-dotted underline-offset-2 cursor-pointer",
+                                        "font-bold underline decoration-dotted underline-offset-2",
                                         l.pruefungsart === "DAkkS" ? "text-azure-800" : "text-ink-2",
                                       )}
-                                      title={l.pruefungsart === "DAkkS" ? "Werk" : "DAkkS"}
+                                      title={l.pruefungsart}
                                     >
                                       {l.pruefungsart}
                                     </span>
@@ -250,7 +230,7 @@ export default function AngebotPage() {
                                 onClick={() =>
                                   patch({ lines: draft.lines.filter((_, i) => i !== li) })
                                 }
-                                className="text-ink-3 hover:text-overdue opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                                className="text-ink-3 hover:text-critical opacity-60 hover:opacity-100 focus:opacity-100 transition-opacity"
                                 title={t("angebot.zeileEntfernen")}
                                 aria-label={t("angebot.zeileEntfernen")}
                               >
@@ -271,7 +251,7 @@ export default function AngebotPage() {
                                     <button
                                       onClick={() => removeItem(li, ii)}
                                       className={clsx(
-                                        "w-3.5 h-3.5 rounded-[3px] border grid place-items-center shrink-0",
+                                        "w-4 h-4 rounded-[6px] border grid place-items-center shrink-0",
                                         it.removed ? "border-line-strong bg-surface-1 text-ink-3" : "border-ok bg-ok text-white",
                                       )}
                                       title={it.removed ? "restore" : "remove"}
@@ -374,10 +354,10 @@ export default function AngebotPage() {
         {/* ============ side panel ============ */}
         <aside className="space-y-3 no-print xl:sticky xl:top-0 anim-fade-up">
           <div className="card p-4">
-            <p className="text-[10px] uppercase tracking-wider text-ink-3 font-bold">
+            <p className="section-label">
               {t("angebot.gesamt")} {lang === "de" ? "netto" : "net"}
             </p>
-            <p className="tnum text-[26px] font-bold text-navy-800 leading-tight">{euro(netto, loc)}</p>
+            <p className="tnum text-[24px] font-bold text-navy-800 leading-tight">{euro(netto, loc)}</p>
             <p className="tnum text-[12.5px] text-ink-3">
               {t("angebot.brutto")}: {euro(brutto, loc)}
             </p>
@@ -408,7 +388,7 @@ export default function AngebotPage() {
 
           {/* test type */}
           <div className="card p-4">
-            <p className="text-[10px] uppercase tracking-wider text-ink-3 font-bold mb-2">
+            <p className="section-label mb-2">
               {t("k360.spalten.pruefungsart")}
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -426,7 +406,7 @@ export default function AngebotPage() {
 
           {/* logistics */}
           <div className="card p-4">
-            <p className="text-[10px] uppercase tracking-wider text-ink-3 font-bold mb-2">{t("angebot.logistik")}</p>
+            <p className="section-label mb-2">{t("angebot.logistik")}</p>
             <div className="space-y-2">
               <ToggleRow
                 label={t("angebot.leihbox")}
@@ -451,7 +431,7 @@ export default function AngebotPage() {
                     onChange={(e) =>
                       patch({ logistik: { ...draft.logistik, dhlBoxes: Math.max(1, Number(e.target.value) || 1) } })
                     }
-                    className="w-16 h-7 rounded-[8px] border border-line px-2 text-right outline-none focus:border-brand-700 tnum"
+                    className="w-16 h-9 rounded-[8px] border border-line px-2 text-right outline-none focus:border-brand-700 tnum"
                   />
                 </label>
               )}
@@ -466,7 +446,7 @@ export default function AngebotPage() {
 
           {/* quick actions */}
           <div className="card p-4 space-y-2">
-            <p className="text-[10px] uppercase tracking-wider text-ink-3 font-bold">
+            <p className="section-label">
               {lang === "de" ? "Weiter" : "Next"}
             </p>
             <Btn
@@ -478,7 +458,7 @@ export default function AngebotPage() {
                   .then(() => app.toast(lang === "de" ? "Kopiert" : "Copied"));
               }}
             >
-              <Download size={14} /> {lang === "de" ? "Angebotszeile kopieren" : "Copy quote line"}
+              <Copy size={14} /> {lang === "de" ? "Angebotszeile kopieren" : "Copy quote line"}
             </Btn>
             <Btn
               variant="dark"
@@ -537,7 +517,7 @@ function ToggleRow({
       <span className="flex items-start gap-2 text-[12.5px] text-ink min-w-0">
         <span
           className={clsx(
-            "mt-[1px] w-4 h-4 rounded-[5px] border grid place-items-center transition-colors shrink-0 group-hover:border-brand-700",
+            "mt-[1px] w-4 h-4 rounded-[6px] border grid place-items-center transition-colors shrink-0 group-hover:border-brand-700",
             checked ? "bg-brand-700 border-brand-700 text-white" : "border-line-strong bg-surface-0",
           )}
         >

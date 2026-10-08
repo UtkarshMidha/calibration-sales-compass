@@ -6,9 +6,9 @@ import {
   ArrowRight,
   Check,
   Download,
+  FileText,
   Mail,
   Phone,
-  Sparkles,
   Timer,
   UserCheck,
 } from "lucide-react";
@@ -30,7 +30,7 @@ import {
   type MessmittelStatus,
 } from "@/lib/data";
 import { useKundenIndex, useMessmittelSample } from "@/lib/real-data";
-import { date, euro, num, monthLabel } from "@/lib/format";
+import { date, euro, num } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import {
@@ -110,7 +110,7 @@ export default function Kunde360Page() {
   const anrede = buildEmail(k, emp?.empfehlung, emp?.empfehlung.anlass ?? "ueberfaellig", lang, app.user, t(app.user.nameKey), t);
 
   return (
-    <div className="h-full overflow-y-auto px-5 py-4">
+    <div className="h-full overflow-y-auto px-6 py-4">
       {/* ---------------- header ---------------- */}
       <div className="card overflow-hidden anim-fade-up">
         <div className="px-5 pt-4 pb-3 border-b border-line flex items-start gap-4 flex-wrap">
@@ -178,13 +178,13 @@ export default function Kunde360Page() {
             <Mail size={14} /> {t("akt.email")}
           </Btn>
           <Btn
-            variant="dark"
+            variant="secondary"
             onClick={() => {
               const id = app.createDraft(k.id);
               router.push(`/angebote/${id}`);
             }}
           >
-            <Sparkles size={14} /> {t("akt.angebot")}
+            <FileText size={14} /> {t("akt.angebot")}
           </Btn>
           <Btn variant="ghost" onClick={() => app.toast(t("toast.wiedervorlage", { datum: date(app.stichtag, loc) }))}>
             <Timer size={14} /> {t("akt.spaeter")}
@@ -199,13 +199,13 @@ export default function Kunde360Page() {
 
       {/* ---------------- tabs ---------------- */}
       <div className="flex items-center gap-2 mt-4 mb-3 flex-wrap">
-        <div className="inline-flex items-center gap-1 rounded-xl bg-surface-0 border border-line p-1 shadow-[0_1px_2px_rgba(16,41,58,.06)]">
+        <div className="inline-flex items-center gap-1 rounded-[8px] bg-surface-0 border border-line p-1 shadow-[0_1px_2px_rgba(16,41,58,.06)]">
           {TABS.map((tb) => (
             <button
               key={tb}
               onClick={() => setTab(tb)}
               className={clsx(
-                "h-[30px] px-3.5 rounded-[9px] text-[12.5px] font-semibold transition-all",
+                "h-[30px] px-3.5 rounded-[8px] text-[12.5px] font-semibold transition-all",
                 tab === tb ? "bg-navy-800 text-white shadow" : "text-ink-3 hover:text-ink hover:bg-surface-1",
               )}
             >
@@ -231,18 +231,32 @@ export default function Kunde360Page() {
             <Zeitstrahl buckets={buckets} stichtag={app.stichtag} lang={lang} />
           </section>
 
-          <section className="card p-4">
-            <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+          <section className="card p-5">
+            <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
               <div>
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2">{t("k360.luecken")}</h3>
-                <p className="text-[12px] text-ink-3 mt-0.5">{t("k360.lueckenHint")}</p>
+                <h3 className="section-label">{t("k360.luecken")}</h3>
+                <p className="text-[12.5px] text-ink-2 mt-1 leading-relaxed">{t("k360.lueckenHint")}</p>
               </div>
-              <div className="text-right">
-                <p className="tnum text-[17px] font-bold text-brand-700">{euro(gapValue, loc)}</p>
-                <p className="text-[11px] text-ink-3">
-                  {gapCount} {lang === "de" ? "Lücken" : "gaps"}
+              <div className="text-right shrink-0">
+                <p className="tnum text-[18px] font-bold text-brand-700">{euro(gapValue, loc)}</p>
+                <p className="text-[11.5px] text-ink-3 tnum">
+                  {gapCount} {gapCount === 1 ? (lang === "de" ? "Lücke" : "gap") : lang === "de" ? "Lücken" : "gaps"}
                 </p>
               </div>
+            </div>
+            <div className="flex items-center gap-4 mb-3 text-[11px] text-ink-3 flex-wrap">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-[3px] bg-brand-700" />
+                {lang === "de" ? "Lücke: fehlt hier, ≥ 40 % der Peers haben sie" : "Gap: missing here, ≥ 40% of peers hold it"}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-[3px] bg-ok" />
+                {lang === "de" ? "Abgedeckt: Geräte im Haus" : "Covered: instruments in-house"}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-[3px] bg-surface-3 border border-line-strong" />
+                {lang === "de" ? "Keine Lücke: bei Peers selten (< 40 %)" : "No gap: rare among peers (< 40%)"}
+              </span>
             </div>
             {gapCount === 0 ? (
               <p className="text-[13px] text-ink-2 py-4">{t("k360.keineLuecke")}</p>
@@ -251,22 +265,35 @@ export default function Kunde360Page() {
                 {luecken.map((l) => {
                   const g = GRUPPEN[l.gruppe];
                   const gap = l.stunden > 0;
+                  const peerPct = Math.round(l.peer * 100);
+                  const title = gap
+                    ? lang === "de"
+                      ? `Lücke: ${g.name} fehlt hier, aber ${peerPct} % der Branche ${k.branche} kalibrieren sie bei uns – Potenzial ≈ ${euro(l.stunden * app.settings.stundensatz, loc, false)}.`
+                      : `Gap: ${g.name} is missing here, but ${peerPct}% of ${k.branche} peers calibrate it with us – potential ≈ ${euro(l.stunden * app.settings.stundensatz, loc, false)}.`
+                    : l.besitzt > 0
+                      ? lang === "de"
+                        ? `${g.name}: ${num(l.besitzt, 0, loc)} Geräte im Haus – abgedeckt, keine Lücke.`
+                        : `${g.name}: ${num(l.besitzt, 0, loc)} instruments in-house – covered, no gap.`
+                      : lang === "de"
+                        ? `${g.name}: nur ${peerPct} % der Peers haben diese Gruppe (unter 40 %) – keine Lücke.`
+                        : `${g.name}: only ${peerPct}% of peers hold this group (below 40%) – no gap.`;
                   return (
                     <div
                       key={l.gruppe}
+                      title={title}
                       className={clsx(
-                        "rounded-[9px] border p-2.5 transition-colors",
+                        "rounded-[8px] border p-2.5 transition-colors cursor-help",
                         gap
-                          ? "border-brand-700/50 bg-brand-50"
+                          ? "border-brand-700/50 bg-brand-50 hover:border-brand-700"
                           : l.besitzt > 0
-                            ? "border-[#c4e8d8] bg-[#f2fbf7]"
-                            : "border-line bg-surface-1",
+                            ? "border-[#c4e8d8] bg-[#e7f6ef] hover:border-ok"
+                            : "border-line bg-surface-1 hover:border-line-strong",
                       )}
                     >
                       <p className="text-[12.5px] font-semibold text-ink leading-tight">{g.name}</p>
                       <div className="flex items-center justify-between mt-1.5 gap-2">
                         <span className="text-[11px] text-ink-3 tnum">
-                          {l.besitzt > 0 ? `${num(l.besitzt, 0, loc)} ×` : `${Math.round(l.peer * 100)} % Peers`}
+                          {l.besitzt > 0 ? `${num(l.besitzt, 0, loc)} ×` : `${peerPct} % ${lang === "de" ? "Peers" : "peers"}`}
                         </span>
                         {gap ? (
                           <span className="tnum text-[11.5px] font-bold text-brand-700">
@@ -293,42 +320,44 @@ export default function Kunde360Page() {
       {/* ---------------- Historie & Potenzial (24M Historie + 12M Prognose gebündelt) ---------------- */}
       {tab === "historie" && (
         <div className="space-y-4 anim-fade-up">
-          <section className="card p-4">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2 mb-1">{t("k360.historie")}</h3>
-            <p className="text-[12px] text-ink-3 mb-3">
-              {t("k360.dakksAnteil")}: <span className="tnum">{Math.round(k.dakksShare * 100)} %</span> · {t("k360.nioAnteil")}:{" "}
-              <span className="tnum">{Math.round(k.nioShare * 100)} %</span>
-            </p>
-            <div className="flex items-end gap-[4px] h-[180px]">
-              {aktivitaet.map((m) => {
+          <section className="card p-5">
+            <h3 className="section-label">{t("k360.historie")}</h3>
+            <HistorieTakeaway rows={aktivitaet} dakksShare={k.dakksShare} nioShare={k.nioShare} lang={lang} loc={loc} />
+            <div className="flex items-end gap-[4px] h-[196px] mt-3">
+              {aktivitaet.map((m, i) => {
                 const max = Math.max(...aktivitaet.map((x) => x.anzahl), 1);
                 const h = (m.anzahl / max) * 160;
                 const hDakks = (m.dakks / max) * 160;
                 const hNio = (m.nio / max) * 160;
+                const jan = m.monat.slice(5, 7) === "01";
                 return (
                   <div
                     key={m.monat}
-                    title={`${monthLabel(m.monat, loc)}: ${num(m.anzahl, 0, loc)} · DAkkS ${num(m.dakks, 0, loc)} · n.i.O. ${num(m.nio, 0, loc)}`}
-                    className="flex-1 flex flex-col justify-end items-center group relative"
+                    title={`${Number(m.monat.slice(5, 7))}/${m.monat.slice(2, 4)}: ${num(m.anzahl, 0, loc)} · DAkkS ${num(m.dakks, 0, loc)} · n.i.O. ${num(m.nio, 0, loc)}`}
+                    className="flex-1 flex flex-col justify-end items-center group relative min-w-0"
                   >
-                    <div className="w-full bg-navy-800 rounded-t-[3px] relative overflow-hidden" style={{ height: Math.max(h, 2) }}>
+                    {/* Gesamt = Höhe · davon DAkkS (blau, unten) · davon n.i.O. (violett, darüber) */}
+                    <div className="w-full bg-navy-800 rounded-t-[4px] relative overflow-hidden" style={{ height: Math.max(h, 2) }}>
                       <div className="absolute bottom-0 left-0 right-0 bg-azure" style={{ height: hDakks }} />
-                      <div className="absolute bottom-0 left-0 right-0 bg-violet/80" style={{ height: hNio }} />
+                      <div className="absolute left-0 right-0 bg-violet" style={{ bottom: hDakks, height: hNio }} />
                     </div>
-                    <span className="tnum text-[9px] text-ink-3 mt-1 opacity-0 group-hover:opacity-100 absolute -top-4">
+                    <span className="tnum text-[10px] text-navy-800 font-bold absolute -top-1 opacity-0 group-hover:opacity-100 bg-surface-0 px-1 rounded whitespace-nowrap">
                       {m.anzahl}
                     </span>
-                    <span className="tnum text-[8.5px] text-ink-3 mt-1 leading-none">{Number(m.monat.slice(5, 7))}.</span>
+                    <span className="tnum text-[10px] text-ink-3 mt-1 leading-none text-center">
+                      {Number(m.monat.slice(5, 7))}.
+                      {(jan || i === 0) && <span className="block opacity-70">’{m.monat.slice(2, 4)}</span>}
+                    </span>
                   </div>
                 );
               })}
             </div>
-            <div className="flex items-center gap-4 mt-3 text-[11px] text-ink-3">
-              <LegendDot color="var(--color-navy-800)" label={t("common.anzahl")} />
+            <div className="flex items-center gap-4 mt-3 text-[11px] text-ink-3 flex-wrap">
+              <LegendDot color="var(--color-navy-800)" label={lang === "de" ? "Gesamt (Höhe)" : "Total (height)"} />
               <span title={lang === "de" ? "DAkkS = Deutsche Akkreditierungsstelle (staatlich akkreditiert)" : "DAkkS = German accreditation body (state-accredited)"}>
-                <LegendDot color="var(--color-azure)" label={t("k360.dakksAnteil")} />
+                <LegendDot color="var(--color-azure)" label={`${lang === "de" ? "davon" : "thereof"} ${t("k360.dakksAnteil")}`} />
               </span>
-              <LegendDot color="var(--color-violet)" label={t("k360.nioAnteil")} />
+              <LegendDot color="var(--color-violet)" label={`${lang === "de" ? "davon" : "thereof"} ${t("k360.nioAnteil")}`} />
             </div>
           </section>
 
@@ -376,7 +405,7 @@ export default function Kunde360Page() {
               value={identQ}
               onChange={(e) => setIdentQ(e.target.value)}
               placeholder="Ident-Nr. …"
-              className="h-[29px] w-[170px] px-2.5 rounded-[8px] border border-line bg-surface-0 outline-none focus:border-brand-700 text-[12.5px]"
+              className="h-8 w-[170px] px-2.5 rounded-[8px] border border-line bg-surface-0 outline-none focus:border-brand-700 transition-colors text-[12.5px]"
             />
             <Btn size="sm" onClick={exportCsv}>
               <Download size={13} /> {t("k360.csv")}
@@ -385,16 +414,16 @@ export default function Kunde360Page() {
 
           <div className="card overflow-hidden">
             <div className="overflow-x-auto max-h-[62vh]">
-              <table className="w-full text-[12.5px] min-w-[760px]">
+              <table className="tbl w-full text-[12.5px] min-w-[760px]">
                 <thead className="sticky top-0 z-10">
-                  <tr className="bg-surface-1 border-b border-line text-[10.5px] uppercase tracking-wider text-ink-3">
+                  <tr className="bg-surface-1 border-b border-line text-[11px] uppercase tracking-wider text-ink-3">
                     <th className="text-left font-bold px-4 py-2">{t("k360.spalten.ident")}</th>
                     <th className="text-left font-bold px-3 py-2">{t("k360.spalten.gruppe")}</th>
                     <th className="text-left font-bold px-3 py-2">{t("k360.spalten.pruefungsart")}</th>
                     <th className="text-left font-bold px-3 py-2">{t("k360.spalten.letzteKal")}</th>
                     <th className="text-left font-bold px-3 py-2">{t("k360.spalten.bewertung")}</th>
                     <th className="text-left font-bold px-3 py-2">{t("k360.spalten.faelligkeit")}</th>
-                    <th className="text-right font-bold px-4 py-2">{t("k360.spalten.status")}</th>
+                    <th className="text-left font-bold px-4 py-2">{t("k360.spalten.status")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--color-line)]">
@@ -418,7 +447,7 @@ export default function Kunde360Page() {
                         {date(r.faelligkeit, loc)}
                         {r.geschaetzt && <span className="ml-1 text-[10px] text-due">≈</span>}
                       </td>
-                      <td className="px-4 py-1.5 text-right">
+                      <td className="px-4 py-1.5 text-left">
                         <StatusPill status={r.status} lang={lang} />
                       </td>
                     </tr>
@@ -461,9 +490,49 @@ function LegendDot({ color, label }: { color: string; label: string }) {
   );
 }
 
+/* One self-explanatory line under the history title: volume, trend,
+ * DAkkS share (accredited regulars) and failed share with verdict. */
+function HistorieTakeaway({
+  rows,
+  dakksShare,
+  nioShare,
+  lang,
+  loc,
+}: {
+  rows: { anzahl: number }[];
+  dakksShare: number;
+  nioShare: number;
+  lang: "de" | "en";
+  loc: string;
+}) {
+  const n = rows.length;
+  const total = rows.reduce((s, r) => s + r.anzahl, 0);
+  const avg = n > 0 ? total / n : 0;
+  const mean = (rs: { anzahl: number }[]) => (rs.length > 0 ? rs.reduce((s, r) => s + r.anzahl, 0) / rs.length : 0);
+  const delta = mean(rows.slice(-6)) - mean(rows.slice(-12, -6));
+  const base = mean(rows.slice(-12, -6));
+  const trend =
+    n < 12 || (base > 0 && Math.abs(delta / base) < 0.05)
+      ? lang === "de" ? "stabil" : "steady"
+      : `${delta > 0 ? "+" : "−"}${num(Math.abs(base > 0 ? (delta / base) * 100 : 0), 0, loc)} %`;
+  const dakks = Math.round(dakksShare * 100);
+  const nio = Math.round(nioShare * 100);
+  const nioWord =
+    nio <= 5
+      ? lang === "de" ? "unauffällig" : "unsuspicious"
+      : lang === "de" ? "auffällig – prüfen" : "notable – check";
+  return (
+    <p className="text-[12.5px] text-ink-2 leading-relaxed mt-1 mb-1 tnum">
+      {lang === "de"
+        ? `${n} Monate · Ø ${num(avg, 0, loc)}/Monat · Trend letzte 6: ${trend} · DAkkS-Anteil ${num(dakks, 0, loc)} % (akkreditierte Stammbindung) · n.i.O. ${num(nio, 0, loc)} % (${nioWord})`
+        : `${n} months · Ø ${num(avg, 0, loc)}/month · trend last 6: ${trend} · DAkkS share ${num(dakks, 0, loc)}% (accredited regulars) · failed ${num(nio, 0, loc)}% (${nioWord})`}
+    </p>
+  );
+}
+
 function MiniStat({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="card p-3.5">
+    <div className="rounded-[8px] border border-line bg-surface-0 p-3">
       <p className="text-[10px] uppercase tracking-wider text-ink-3 font-bold">{label}</p>
       <p className="tnum text-[17px] font-bold text-navy-800 mt-0.5">{value}</p>
       <p className="text-[11.5px] text-ink-3">{sub}</p>
@@ -481,46 +550,70 @@ function KundenPrognoseView({
   loc: string;
 }) {
   const { t } = useI18n();
+  /* plot geometry: wide light 80-%-Band (P10→P90), narrow dark core = mean.
+   * The band surrounds the mean — it is never stacked on top of it. */
+  const H = 164;
   const max = Math.max(...data.map((d) => d.p90), 1);
-  const summe = data.reduce((s, d) => s + d.kalibrierungen, 0);
-  const summeBetr = data.reduce((s, d) => s + d.p90, 0);
+  const sumMean = data.reduce((s, d) => s + d.kalibrierungen, 0);
+  const sumP10 = data.reduce((s, d) => s + d.p10, 0);
+  const sumP90 = data.reduce((s, d) => s + d.p90, 0);
+  const peak = data.reduce((a, b) => (b.kalibrierungen > a.kalibrierungen ? b : a), data[0]);
+  const kurz = (monat: string) => `${Number(monat.slice(5, 7))}/${monat.slice(2, 4)}`;
 
   return (
     <div className="space-y-4 anim-fade-up">
-      <section className="card p-4">
-        <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
-          <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-2">{t("k360.prognose")}</h3>
+      <section className="card p-5">
+        <div className="flex items-baseline justify-between flex-wrap gap-2">
+          <h3 className="section-label">{t("k360.prognose")}</h3>
           <p className="text-[12.5px] text-ink-2 tnum">
-            {lang === "de" ? "Summe 12 Monate:" : "12-month total:"}{" "}
-            <strong className="text-navy-800">{num(summe, 1, loc)}</strong> · 80-%-Band ≤{" "}
-            <strong className="text-navy-800">{num(summeBetr, 1, loc)}</strong>
+            {lang === "de" ? "12 Monate:" : "12 months:"}{" "}
+            <strong className="text-navy-800">≈ {num(sumMean, 0, loc)}</strong>
+            <span className="text-ink-3">
+              {" "}· {lang === "de" ? "Band" : "band"} {num(sumP10, 0, loc)}–{num(sumP90, 0, loc)}
+            </span>
           </p>
         </div>
+        <p className="text-[12.5px] text-ink-2 leading-relaxed mt-1 mb-3">
+          {lang === "de"
+            ? `Erwartete Eingänge je Monat – Spitze im ${kurz(peak.monat)} (≈ ${num(peak.kalibrierungen, 0, loc)}). Kapazität und Abhol-Touren danach ausrichten.`
+            : `Expected intake per month – peak in ${kurz(peak.monat)} (≈ ${num(peak.kalibrierungen, 0, loc)}). Align capacity and pickup tours accordingly.`}
+        </p>
         <div className="flex items-end gap-2 h-[200px]">
           {data.map((d) => (
-            <div key={d.monat} className="flex-1 flex flex-col items-center justify-end h-full relative group">
-              {/* band */}
-              <div
-                className="w-full bg-azure/20 rounded-t-[3px]"
-                style={{ height: `${((d.p90 - d.p10) / max) * 170}px` }}
-              />
-              {/* value */}
-              <div
-                className="w-full bg-gradient-to-t from-navy-800 to-navy-700 rounded-[3px]"
-                style={{ height: `${(d.kalibrierungen / max) * 170}px` }}
-              />
-              <span className="tnum text-[9.5px] text-ink-3 mt-1 leading-none">{Number(d.monat.slice(5, 7))}.</span>
-              <span className="tnum text-[10px] text-navy-800 font-bold absolute -top-1 opacity-0 group-hover:opacity-100 bg-surface-0 px-1 rounded">
-                {num(d.kalibrierungen, 1, loc)}
-              </span>
+            <div
+              key={d.monat}
+              title={`${kurz(d.monat)}: ${lang === "de" ? "erwartet" : "expected"} ${num(d.kalibrierungen, 0, loc)}, ${lang === "de" ? "Band" : "band"} ${num(d.p10, 0, loc)}–${num(d.p90, 0, loc)}`}
+              className="flex-1 h-full flex flex-col justify-end items-center relative group"
+            >
+              <div className="relative w-full" style={{ height: H }}>
+                {/* 80-%-Band */}
+                <div
+                  className="absolute inset-x-0 rounded-[4px] bg-azure/20"
+                  style={{ bottom: `${(d.p10 / max) * H}px`, height: `${Math.max(((d.p90 - d.p10) / max) * H, 3)}px` }}
+                />
+                {/* Mittelwert */}
+                <div
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 rounded-[4px] bg-navy-800"
+                  style={{ width: "56%", height: `${Math.max((d.kalibrierungen / max) * H, 2)}px` }}
+                />
+                <span className="tnum text-[10px] text-navy-800 font-bold absolute -top-1 opacity-0 group-hover:opacity-100 bg-surface-0 px-1 rounded whitespace-nowrap">
+                  {num(d.kalibrierungen, 0, loc)}
+                </span>
+              </div>
+              <span className="tnum text-[10px] text-ink-3 mt-1 leading-none">{kurz(d.monat)}</span>
             </div>
           ))}
         </div>
-        <p className="text-[11.5px] text-ink-3 mt-2">
-          {lang === "de"
-            ? "Balken: Mittelwert der Monatssumme · Band: 10.–90.-Perzentil aus dem Rücklaufmodell."
-            : "Bar: monthly mean · band: 10th–90th percentile from the return model."}
-        </p>
+        <div className="flex items-center gap-4 mt-3 text-[11px] text-ink-3 flex-wrap">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-[10px] rounded-[2px] bg-navy-800" />
+            {lang === "de" ? "Erwartet (Mittel)" : "Expected (mean)"}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-[10px] rounded-[2px] bg-azure/30 border border-azure/40" />
+            {lang === "de" ? "Unsicherheit (P10–P90, 80 %)" : "Uncertainty (P10–P90, 80%)"}
+          </span>
+        </div>
       </section>
     </div>
   );
@@ -689,13 +782,13 @@ function RealKundeView({ kundeId }: { kundeId: string }) {
           </p>
         ) : (
           <div className="overflow-x-auto max-h-[52vh]">
-            <table className="w-full text-[12.5px] min-w-[680px]">
+            <table className="tbl w-full text-[12.5px] min-w-[680px]">
               <thead className="sticky top-0 z-10">
-                <tr className="bg-surface-1 border-b border-line text-[10.5px] uppercase tracking-wider text-ink-3">
+                <tr className="text-[11px]">
                   <th className="text-left font-bold px-4 py-2">{t("k360.spalten.ident")}</th>
                   <th className="text-left font-bold px-3 py-2">{t("k360.spalten.gruppe")}</th>
                   <th className="text-left font-bold px-3 py-2">{t("k360.spalten.faelligkeit")}</th>
-                  <th className="text-right font-bold px-4 py-2">{t("k360.spalten.status")}</th>
+                  <th className="text-left font-bold px-4 py-2">{t("k360.spalten.status")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-line)]">
@@ -706,7 +799,7 @@ function RealKundeView({ kundeId }: { kundeId: string }) {
                     <td className={clsx("px-3 py-1.5 tnum", r.tage > 0 ? "text-overdue font-semibold" : "text-ink-2")}>
                       {date(r.faelligkeit, loc)} <span className="text-ink-3">({r.tage > 0 ? `+${r.tage}` : r.tage} d)</span>
                     </td>
-                    <td className="px-4 py-1.5 text-right">
+                    <td className="px-4 py-1.5 text-left">
                       <StatusPill status={r.status === "teilabwanderung" ? "teilabwanderung" : r.status === "faellig_bald" ? "faellig_bald" : "ueberfaellig"} lang={lang} />
                     </td>
                   </tr>

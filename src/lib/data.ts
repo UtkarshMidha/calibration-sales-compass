@@ -933,8 +933,8 @@ export function getPrognoseGesamt(stichtag: Stichtag = "2026-09-25"): PrognoseMo
     if (!hist) {
       kal = Math.round(21400 * saison * jahresTrend * (0.97 + 0.06 * r()));
     }
-    if (key === "2026-09") kal = 10_147; // partial month (DQ-9) – als Teildaten markiert
-    const partial = key === "2026-09";
+    if (key === "2026-09" && hist) kal = 10_147; // partial month (DQ-9) – nur als Historie, nie als Prognose
+    const partial = key === "2026-09" && hist;
 
     const stunden = Math.round(kal * 0.18);
     const unc = hist ? 0 : 0.09 + 0.012 * (i - 23);

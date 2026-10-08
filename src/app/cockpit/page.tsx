@@ -19,8 +19,9 @@ import { euro, num, pct } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import { Card, Sparkline } from "@/components/ui";
-const GRADIENT_BRANCHE = "linear-gradient(90deg, var(--color-brand-700), var(--color-brand))";
-const OUTCOME_COLORS = ["#10b981", "#2563eb", "#94a3b8", "#f59e0b", "#8b5cf6", "#64748b", "#cbd5e1"];
+const SOLID_BAR = "var(--color-navy-800)";
+const SOLID_PEAK = "var(--color-brand-700)";
+const OUTCOME_COLORS = ["#10b981", "var(--color-action)", "#94a3b8", "#f59e0b", "#8b5cf6", "#64748b", "#cbd5e1"];
 export default function CockpitPage() {
   const app = useApp();
   const { t, lang } = useI18n();
@@ -28,24 +29,26 @@ export default function CockpitPage() {
   const [showBaseline, setShowBaseline] = useState(false);
   if (app.user.role !== "leitung") {
     return (
-      <div className="h-full overflow-y-auto px-5 py-4">
+      <div className="h-full overflow-y-auto">
+        <div className="page">
         <div className="max-w-xl mx-auto card p-8 text-center mt-10 anim-fade-up">
-          <p className="text-[15px] font-bold text-slate-900">
+          <p className="text-[15px] font-bold text-navy-800">
             {lang === "de" ? "Cockpit ist der Vertriebsleitung vorbehalten." : "The cockpit is reserved for sales management."}
           </p>
-          <p className="text-[13px] text-slate-500 mt-1.5">
+          <p className="text-[13px] text-ink-2 mt-1.5">
             {lang === "de"
               ? "Wechseln Sie oben rechts zu Thomas Brandt, um Prognose, Risiko und Team zu sehen – oder arbeiten Sie mit Dashboard und Tagesliste weiter."
               : "Switch to Thomas Brandt (top right) to see forecast, risk and team – or continue with dashboard and daily list."}
           </p>
           <div className="mt-4 flex justify-center gap-2">
-            <Link href="/" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[10px] bg-[#2563eb] text-white text-[13px] font-semibold">
+            <Link href="/" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[8px] bg-action text-white text-[13px] font-semibold">
               {t("nav.dashboard")}
             </Link>
-            <Link href="/tagesliste" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[10px] border border-slate-200 text-[13px] font-semibold text-slate-700">
+            <Link href="/tagesliste" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[8px] border border-line text-[13px] font-semibold text-ink-2">
               {t("nav.tagesliste")}
             </Link>
           </div>
+        </div>
         </div>
       </div>
     );
@@ -88,12 +91,13 @@ export default function CockpitPage() {
     },
   ];
   return (
-    <div className="h-full overflow-y-auto px-5 py-4">
+    <div className="h-full overflow-y-auto">
+      <div className="page space-y-4">
       {/* ---------------- intro ---------------- */}
-      <div className="flex items-end justify-between gap-3 mb-4 anim-fade-up">
+      <div className="flex items-end justify-between gap-3 anim-fade-up">
         <div>
-          <h1 className="text-[20px] font-bold leading-tight text-navy-800">{t("cockpit.titel")}</h1>
-          <p className="text-[13px] text-ink-2 mt-0.5">
+          <h1 className="page-title">{t("cockpit.titel")}</h1>
+          <p className="page-sub">
             {lang === "de"
               ? "Portfolio auf einen Blick: Fälligkeiten, Umsatz – und wo er gefährdet ist."
               : "The portfolio at a glance: due dates, revenue – and where it is at risk."}
@@ -106,7 +110,7 @@ export default function CockpitPage() {
         </span>
       </div>
       {/* ---------------- KPIs ---------------- */}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 stagger mb-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 stagger">
         {kpis.map((k) => {
           const Icon = k.icon;
           return (
@@ -118,8 +122,8 @@ export default function CockpitPage() {
               >
                 <Icon size={16} style={{ color: k.accent }} />
               </span>
-              <p className="text-[10.5px] tracking-wider text-ink-3 font-bold uppercase pr-9 leading-tight">{k.label}</p>
-              <p className="tnum text-[26px] font-bold text-navy-800 leading-tight mt-2 whitespace-nowrap">{k.value}</p>
+              <p className="section-label pr-9 leading-tight">{k.label}</p>
+              <p className="tnum text-[24px] font-bold text-navy-800 leading-tight mt-2 whitespace-nowrap">{k.value}</p>
               <p className="text-[11.5px] text-ink-3 mt-1.5 leading-snug">{k.hint}</p>
             </div>
           );
@@ -127,7 +131,7 @@ export default function CockpitPage() {
       </div>
       {/* ---------------- forecast ---------------- */}
       <Card
-        className="mb-3 anim-fade-up"
+        className="anim-fade-up"
         title={t("cockpit.forecast")}
         hint={t("cockpit.forecastHint")}
         actions={
@@ -160,16 +164,16 @@ export default function CockpitPage() {
         <div className="px-4 pb-4">
           <Sparkline data={getPrognoseGesamt(app.stichtag)} showBaseline={showBaseline} lang={lang} height={200} />
           <div className="mt-3 grid sm:grid-cols-3 gap-2">
-            <div className="rounded-[10px] bg-surface-1 border border-line px-3 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3">{lang === "de" ? "Prognose 12 Monate" : "12-month forecast"}</p>
+            <div className="rounded-[8px] bg-surface-1 border border-line px-3 py-2">
+              <p className="section-label">{lang === "de" ? "Prognose 12 Monate" : "12-month forecast"}</p>
               <p className="tnum text-[16px] font-bold text-navy-800">{num(fTotal, 0, loc)}</p>
             </div>
-            <div className="rounded-[10px] bg-surface-1 border border-line px-3 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3">{lang === "de" ? "Stärkster Monat" : "Peak month"}</p>
+            <div className="rounded-[8px] bg-surface-1 border border-line px-3 py-2">
+              <p className="section-label">{lang === "de" ? "Stärkster Monat" : "Peak month"}</p>
               <p className="tnum text-[16px] font-bold text-navy-800">{fPeak.monat.slice(5)}/{fPeak.monat.slice(2, 4)} · {num(fPeak.kalibrierungen, 0, loc)}</p>
             </div>
-            <div className="rounded-[10px] bg-surface-1 border border-line px-3 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3">{lang === "de" ? "Unsicherheit am Ende" : "Uncertainty at end"}</p>
+            <div className="rounded-[8px] bg-surface-1 border border-line px-3 py-2">
+              <p className="section-label">{lang === "de" ? "Unsicherheit am Ende" : "Uncertainty at end"}</p>
               <p className="tnum text-[16px] font-bold text-navy-800">± {num(fBandPct, 0, loc)} %</p>
             </div>
           </div>
@@ -188,11 +192,11 @@ export default function CockpitPage() {
               {lang === "de" ? "Prognose" : "Forecast"}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="w-4 h-2.5 rounded-[3px] border border-azure/40 bg-azure/20" />
+              <span className="w-4 h-2.5 rounded-[4px] border border-[#c4e2f7] bg-azure-100" />
               {lang === "de" ? "80-%-Band" : "80% band"}
             </span>
             <span className={clsx("inline-flex items-center gap-1.5", !showBaseline && "opacity-50")}>
-              <span className="w-4 border-t-2 border-dashed border-ink-3" />
+              <span className="w-4 border-t-[3px] border-dotted border-ink-3" />
               {lang === "de" ? "Baseline (Saison-naiv)" : "Baseline (seasonal-naive)"}
             </span>
           </div>
@@ -211,7 +215,7 @@ export default function CockpitPage() {
         </div>
       </Card>
       {/* ---------------- risk: lollipop (Branche) + tiles (Gebiet) ---------------- */}
-      <div className="grid gap-3 lg:grid-cols-2 mb-3">
+      <div className="grid gap-3 lg:grid-cols-2">
         <RiskLolli
           title={t("cockpit.atRiskBranche")}
           rows={agg.byBranche}
@@ -228,7 +232,7 @@ export default function CockpitPage() {
         />
       </div>
       {/* ---------------- funnel + bullets ---------------- */}
-      <div className="grid gap-3 lg:grid-cols-2 mb-3">
+      <div className="grid gap-3 lg:grid-cols-2">
         <TeamFunnel />
         <ErfolgsBullet loc={loc} />
       </div>
@@ -236,6 +240,7 @@ export default function CockpitPage() {
       <div className="grid gap-3 md:grid-cols-2">
         <OutcomeDonut loc={loc} />
         <LossLolli loc={loc} />
+      </div>
       </div>
     </div>
   );
@@ -288,28 +293,28 @@ function RiskLolli({
             <Link
               key={r.key}
               href={`/kunden?${hrefQuery}=${encodeURIComponent(r.key)}`}
-              className="group flex items-center gap-2.5 px-2 py-[5px] rounded-[9px] hover:bg-blue-50/60 transition-colors"
+              className="group flex items-center gap-2.5 px-2 py-[5px] rounded-[8px] hover:bg-surface-1 transition-colors"
             >
-              <span className="tnum text-[10.5px] font-bold text-slate-300 w-5 shrink-0 text-right">
+              <span className="tnum text-[10.5px] font-bold text-ink-3 w-5 shrink-0 text-right">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="w-[34%] shrink-0 text-[12.5px] font-medium text-ink truncate group-hover:text-[#2563eb] transition-colors">
+              <span className="w-[34%] shrink-0 text-[12.5px] font-medium text-ink truncate group-hover:text-action transition-colors">
                 {r.key}
               </span>
-              <span className="flex-1 min-w-[40px] h-[7px] rounded-full bg-slate-100 relative">
+              <span className="flex-1 min-w-[40px] h-[7px] rounded-full bg-surface-2 relative overflow-visible">
                 <span
                   className="anim-grow-x absolute inset-y-0 left-0 rounded-full"
-                  style={{ width: `${Math.max(3, (r.wert / max) * 100)}%`, background: GRADIENT_BRANCHE, animationDelay: `${Math.min(i * 45, 500)}ms` }}
+                  style={{ width: `${Math.max(3, (r.wert / max) * 100)}%`, background: i === 0 ? SOLID_PEAK : SOLID_BAR }}
                 />
                 <span
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full ring-2 ring-white shadow anim-fade-in"
-                  style={{ left: `${Math.max(3, (r.wert / max) * 100)}%`, background: "#b84e00", animationDelay: `${300 + Math.min(i * 45, 500)}ms` }}
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full ring-1 ring-white shadow"
+                  style={{ left: `max(8px, min(calc(${Math.max(3, (r.wert / max) * 100)}%), calc(100% - 8px)))`, background: "var(--color-brand-700)" }}
                 />
               </span>
               <span className="tnum text-[11.5px] font-bold text-navy-800 min-w-[92px] text-right shrink-0 whitespace-nowrap">
                 {euro(r.wert, loc)}
               </span>
-              <span className="tnum text-[10.5px] font-bold text-white bg-slate-400 rounded-md px-1.5 py-px shrink-0">
+              <span className="tnum text-[10.5px] font-bold text-ink-2 bg-surface-2 rounded-full px-1.5 py-px shrink-0">
                 {share < 1 ? "< 1" : share} %
               </span>
               <ChevronRight size={13} className="shrink-0 -ml-1 text-ink-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -344,7 +349,7 @@ function RiskTiles({
       title={title}
       hint={hint}
       actions={
-        <Link href="/kunden" className="inline-flex items-center gap-1 text-[12px] font-bold text-[#2563eb] hover:underline">
+        <Link href="/kunden" className="inline-flex items-center gap-1 text-[12px] font-bold text-action hover:underline">
           {lang === "de" ? "Alle Kunden" : "All customers"} <ArrowRight size={12} />
         </Link>
       }
@@ -356,26 +361,25 @@ function RiskTiles({
           : `Balanced – only ${spread} % between strongest and weakest region. No hotspot, stay on all of them.`}
       </p>
       <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {rows.map((r, i) => {
+        {rows.map((r) => {
           const share = Math.round((r.wert / total) * 100);
           return (
             <Link
               key={r.key}
               href={`/kunden?${hrefQuery}=${encodeURIComponent(r.key)}`}
-              className="group rounded-xl border border-line bg-surface-0 hover:border-[#2563eb] hover:shadow-[0_8px_20px_-12px_rgba(37,99,235,.5)] transition-all p-3 anim-fade-up"
-              style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}
+              className="group rounded-[8px] border border-line bg-surface-0 hover:border-line-strong transition-colors p-3"
             >
-              <p className="text-[12px] font-bold text-ink truncate group-hover:text-[#2563eb]">{r.key}</p>
+              <p className="text-[12px] font-bold text-ink truncate group-hover:text-action">{r.key}</p>
               <p className="tnum text-[16px] font-extrabold text-navy-800 tracking-tight mt-0.5">
                 {(r.wert / 1_000_000).toLocaleString(loc, { maximumFractionDigits: 2 })} {lang === "de" ? "Mio. €" : "m €"}
               </p>
-              <div className="h-[5px] rounded-full bg-slate-100 overflow-hidden mt-1.5">
+              <div className="h-[5px] rounded-full bg-surface-2 overflow-hidden mt-1.5">
                 <div
-                  className="anim-grow-x h-full rounded-full bg-gradient-to-r from-[#1c3b51] to-[#3b9ee3]"
-                  style={{ width: `${(r.wert / max) * 100}%`, animationDelay: `${200 + Math.min(i * 50, 300)}ms` }}
+                  className="anim-grow-x h-full rounded-full bg-navy-800"
+                  style={{ width: `${(r.wert / max) * 100}%` }}
                 />
               </div>
-              <p className="tnum text-[10.5px] mt-1 text-[#2563eb] font-bold">
+              <p className="tnum text-[10.5px] mt-1 text-action font-bold">
                 {share} % {lang === "de" ? "des Risikos" : "of risk"} · {lang === "de" ? "Kunden ansehen" : "View customers"} →
               </p>
             </Link>
@@ -407,11 +411,11 @@ function TeamFunnel() {
                 </p>
               </div>
               <div
-                className="h-[26px] rounded-[8px] bg-slate-100 flex overflow-hidden"
+                className="h-[26px] rounded-[8px] bg-surface-2 flex overflow-hidden"
                 title={`${m.erledigt} ${lang === "de" ? "von" : "of"} ${m.uebernommen}`}
               >
                 <div
-                  className="anim-grow-x h-full bg-gradient-to-r from-[#1c6e4a] to-[#2f9e6e] flex items-center px-2.5 text-white text-[11.5px] font-bold whitespace-nowrap overflow-hidden"
+                  className="anim-grow-x h-full bg-navy-800 flex items-center px-2.5 text-white text-[11.5px] font-bold whitespace-nowrap overflow-hidden"
                   style={{ width: `${(m.erledigt / Math.max(1, m.uebernommen)) * 100}%` }}
                 >
                   {t("cockpit.erledigt")} · {m.erledigt}
@@ -446,7 +450,7 @@ function ErfolgsBullet({ loc }: { loc: string }) {
       hint={lang === "de" ? "Balken = gemessen, Strich = Startannahme. Darüber = besser als gedacht." : "Bar = measured, tick = starting assumption. Above it = better than thought."}
     >
       <div className="px-4 pb-4 pt-0.5 space-y-3">
-        {rows.map((r, i) => {
+        {rows.map((r) => {
           const quote = r.versuche > 0 ? r.erfolge / r.versuche : 0;
           const prior = ANLASS_ERFOLGSCHANCE[r.anlass] ?? 0;
           const win = quote >= prior;
@@ -465,13 +469,12 @@ function ErfolgsBullet({ loc }: { loc: string }) {
                 {" · "}
                 {lang === "de" ? "Annahme" : "Assumption"} {pct(prior, 0, loc)}
               </p>
-              <div className="relative h-[9px] rounded-full bg-slate-100">
+              <div className="relative h-[9px] rounded-full bg-surface-2">
                 <div
                   className="anim-grow-x absolute inset-y-0 left-0 rounded-full"
                   style={{
                     width: `${quote * 100}%`,
-                    background: win ? "linear-gradient(90deg,#1c6e4a,#2f9e6e)" : "linear-gradient(90deg,#b45309,#f59e0b)",
-                    animationDelay: `${Math.min(i * 60, 300)}ms`,
+                    background: win ? "var(--color-navy-800)" : "var(--color-overdue)",
                   }}
                 />
                 <span
@@ -543,8 +546,8 @@ function OutcomeDonut({ loc }: { loc: string }) {
           style={{ opacity: hover ? 0 : 1 }}
         >
             <div className="text-center">
-              <p className="tnum text-[22px] font-extrabold text-navy-800 leading-none">{num(total, 0, loc)}</p>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-3 mt-0.5">
+              <p className="tnum text-[24px] font-extrabold text-navy-800 leading-none">{num(total, 0, loc)}</p>
+              <p className="section-label mt-0.5">
                 {lang === "de" ? "Ergebnisse" : "Outcomes"}
               </p>
             </div>
@@ -580,20 +583,20 @@ function LossLolli({ loc }: { loc: string }) {
           : `${top.key} takes ${topPct} % of lost orders – worth a win-back campaign there.`}
       </p>
       <div className="px-4 pb-4 space-y-2">
-        {rows.map((r, i) => (
+        {rows.map((r) => (
           <div key={r.key}>
             <div className="flex items-baseline justify-between gap-2 mb-[3px]">
               <span className="text-[12.5px] text-ink font-medium truncate">{r.key}</span>
               <span className="tnum text-[12px] font-extrabold text-navy-800 shrink-0">{r.n}</span>
             </div>
-            <div className="flex-1 h-[7px] rounded-full bg-slate-100 relative">
+            <div className="flex-1 h-[7px] rounded-full bg-surface-2 relative overflow-visible">
               <span
-                className="anim-grow-x absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#1c3b51] to-[#356a8c]"
-                style={{ width: `${Math.max(4, (r.n / max) * 100)}%`, animationDelay: `${Math.min(i * 60, 360)}ms` }}
+                className="anim-grow-x absolute inset-y-0 left-0 rounded-full bg-navy-800"
+                style={{ width: `${Math.max(4, (r.n / max) * 100)}%` }}
               />
               <span
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full ring-2 ring-white shadow bg-[#1c3b51] anim-fade-in"
-                style={{ left: `${Math.max(4, (r.n / max) * 100)}%`, animationDelay: `${300 + Math.min(i * 60, 360)}ms` }}
+                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full ring-1 ring-white shadow bg-navy-800"
+                style={{ left: `max(8px, min(calc(${Math.max(4, (r.n / max) * 100)}%), calc(100% - 8px)))` }}
               />
             </div>
           </div>
