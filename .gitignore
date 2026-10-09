@@ -8,3 +8,7 @@ data/
 .env
 *.csv
 .opencode
+# Hackathon PRD - internal only, do not publish
+2026-10-07-pecal-kompass-prd.md
+PRD.local.md
+*-prd.md
