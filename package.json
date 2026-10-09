@@ -1,8 +1,8 @@
 {
-  "name": "pecal-kompass",
+  "name": "calibration-sales-compass",
   "version": "0.1.0",
   "private": true,
-  "description": "PeCal Kompass — AI sales assistant for Perschmann Calibration Inside Sales",
+  "description": "Calibration Sales Compass (ex-PeCal Kompass) — AI sales assistant, 2nd Place Hack the Lab Perschmann KI-Hackathon 2026",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

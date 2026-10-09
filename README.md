@@ -1,4 +1,6 @@
-# PeCal Kompass
+# Calibration Sales Compass (ex-PeCal Kompass)
+
+> 2nd Place — Hack the Lab, Perschmann KI-Hackathon 2026, Challenge 2 "Customer Activity Monitoring"
 
 Hackathon-MVP („PeCal Kompass") für die Perschmann Calibration GmbH: ein KI-gestützter Vertriebsassistent, der aus dem Kalibrierungsdatensatz jeden Tag eine priorisierte **Tagesliste** baut — mit Herleitung, Kunden-360, Angebotsentwurf, Cockpit und Modellgüte-Transparenz.
 
