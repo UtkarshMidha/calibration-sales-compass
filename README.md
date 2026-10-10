@@ -2,7 +2,7 @@
 
 > Which customers should we contact today — and why?
 
-**Author: [Utkarsh Midha (@UtkarshMidha)](https://github.com/UtkarshMidha)** · 🥈 **2nd place**, Hack the Lab – Perschmann KI-Hackathon, Braunschweig 2026 · Built as `PeCal Kompass`, the AI sales assistant for Perschmann Calibration's inside-sales team
+**Authors: [Utkarsh Midha (@UtkarshMidha)](https://github.com/UtkarshMidha) and [Raj Mahadevwala (@rajmahadev8)](https://github.com/rajmahadev8)** · 🥈 **2nd place**, Hack the Lab – Perschmann KI-Hackathon, Braunschweig 2026 · Built as `PeCal Kompass`, the AI sales assistant for Perschmann Calibration's inside-sales team
 
 Inside sales spends most of the day writing quotations, so outreach is reactive: whoever calls first gets the attention, not whoever needs it most. Meanwhile the data already knows who needs calling — every instrument carries a due date, and every instrument that should have come back but didn't is a silent alarm. On the reference date alone, **65,282 instruments at 2,424 customers are overdue**. Calibration Sales Compass turns that scattered signal into one ranked morning list, with the reason in plain words and the quote draft one click away.
 
@@ -87,7 +87,7 @@ CSV snapshots (git-ignored)            deterministic, re-runnable
 
 The red line of this project: the LLM narrates, never decides. Scores, rankings and figures come only from the pipeline and app logic ([ADR-style rule](https://github.com/UtkarshMidha/calibration-sales-compass/blob/main/WALKTHROUGH.md#how-these-screenshots-were-produced) enforced in code and evaluated by a golden question set).
 
-<sub>Architecture and implementation by [@UtkarshMidha](https://github.com/UtkarshMidha).</sub>
+<sub>Architecture and implementation by [@UtkarshMidha](https://github.com/UtkarshMidha) and [@rajmahadev8](https\://github.com/rajmahadev8).</sub>
 
 ## 🔒 The core guarantees
 
@@ -216,10 +216,10 @@ Plus `scripts/pdf-smoke.ts` (quote PDF render check) and a golden question set e
 
 ## 📜 Provenance and license
 
-Built by **[Utkarsh Midha (@UtkarshMidha)](https://github.com/UtkarshMidha)** for Hack the Lab – the Perschmann KI-Hackathon, Braunschweig, October 2026, where it placed **2nd** in Challenge 2 "Customer Activity Monitoring". The original build spec is kept locally as `PRD.local.md`.
+Built by **[Utkarsh Midha (@UtkarshMidha)](https://github.com/UtkarshMidha)** and **[Raj Mahadevwala (@rajmahadev8)](https://github.com/rajmahadev8)** for Hack the Lab – the Perschmann KI-Hackathon, Braunschweig, October 2026, where it placed **2nd** in Challenge 2 "Customer Activity Monitoring". The original build spec is kept locally as `PRD.local.md`.
 
 MIT. See [`LICENSE`](https://github.com/UtkarshMidha/calibration-sales-compass/blob/main/LICENSE).
 
 ---
 
-<sub>**Calibration Sales Compass** (built as PeCal Kompass) · © 2026 **Utkarsh Midha ([@UtkarshMidha](https://github.com/UtkarshMidha))** · original repository: [github.com/UtkarshMidha/calibration-sales-compass](https://github.com/UtkarshMidha/calibration-sales-compass)</sub>
+<sub>**Calibration Sales Compass** (built as PeCal Kompass) · © 2026 **Utkarsh Midha ([@UtkarshMidha](https://github.com/UtkarshMidha)) and Raj Mahadevwala ([@rajmahadev8](https://github.com/rajmahadev8))** · original repository: [github.com/UtkarshMidha/calibration-sales-compass](https://github.com/UtkarshMidha/calibration-sales-compass)</sub>
